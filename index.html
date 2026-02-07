@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
@@ -87,7 +88,9 @@
           <span class="location-icon">📍</span>
           <span class="location-text" id="location-text">深圳·办公室</span>
         </div>
+        <button class="btn-sound" id="theme-toggle" title="切换深色/浅色模式">🌓</button>
         <button class="btn-sound" id="sound-toggle-btn" title="开关音效">🔊</button>
+        <button class="btn-menu" id="map-btn" title="旅程地图">🗺️</button>
         <button class="btn-menu" id="menu-btn">☰</button>
       </header>
 
@@ -138,6 +141,19 @@
         </div>
       </div>
     </section>
+
+    <!-- ===== 章节地图弹窗 ===== -->
+    <div class="map-modal" id="map-modal" style="display: none;">
+      <div class="map-content">
+        <div class="map-header">
+          <h2>🗺️ 旅程地图</h2>
+          <button class="btn-close" id="close-map-btn">×</button>
+        </div>
+        <div class="map-visual" id="map-visual">
+          <!-- 动态生成地图节点 -->
+        </div>
+      </div>
+    </div>
 
     <!-- ===== 章节过渡界面 ===== -->
     <section id="transition-screen" class="screen">
@@ -284,9 +300,11 @@
   <script src="audio.js"></script>
   <!-- v2.0 Core Modules -->
   <script src="core/StoryLoader.js"></script>
+  <script src="core/AnalyticsManager.js"></script>
   <script src="core/GameEngine.js"></script>
   <script src="core/UIManager.js"></script>
   <script src="core/DLCLoader.js"></script>
+  <script src="admin_theme.js"></script>
   <!-- Main Game -->
   <script src="game.js"></script>
 </body>

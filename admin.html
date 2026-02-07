@@ -33,6 +33,7 @@
             <header class="admin-header">
                 <h1>🛠️ 题目管理中心</h1>
                 <div class="header-actions">
+                    <a href="admin/dashboard.html" class="btn btn-primary" style="margin-right: 10px;">📊 数据看板</a>
                     <button id="preview-btn" class="btn btn-secondary">👁️ 预览游戏</button>
                     <button id="logout-btn" class="btn btn-secondary">🚪 退出</button>
                 </div>
@@ -40,29 +41,125 @@
 
             <!-- 标签页导航 -->
             <nav class="admin-tabs">
-                <button class="tab-btn active" data-tab="questions">📝 题目管理</button>
+                <button class="tab-btn active" data-tab="story">🎬 剧情编辑</button>
+                <button class="tab-btn" data-tab="knowledge">📚 知识库</button>
                 <button class="tab-btn" data-tab="difficulty">⚙️ 难度设置</button>
-                <button class="tab-btn" data-tab="chapters">📖 章节配置</button>
             </nav>
 
-            <!-- 题目管理面板 -->
-            <div id="questions-panel" class="admin-panel active">
+            <!-- 🎬 剧情编辑器面板 -->
+            <div id="story-panel" class="admin-panel active">
                 <div class="panel-header">
                     <div class="chapter-selector">
-                        <label>选择章节：</label>
-                        <select id="chapter-select">
-                            <!-- 动态生成章节选项 -->
+                        <label>编辑章节：</label>
+                        <select id="story-chapter-select">
+                            <!-- 动态生成 -->
                         </select>
+                    </div>
+                    <div class="header-actions">
+                        <button id="add-node-btn" class="btn btn-secondary">➕ 添加节点</button>
+                        <button id="chapter-settings-btn" class="btn btn-secondary">⚙️ 章节属性</button>
+                        <button id="theme-toggle" class="btn btn-secondary" title="切换深色/浅色模式">🌓</button>
+                        <button id="save-story-btn" class="btn btn-primary">💾 保存当前脚本</button>
+                        <button id="export-story-btn" class="btn btn-secondary">📤 导出 JSON</button>
+                    </div>
+                </div>
+                <div class="story-editor-container">
+                    <!-- 左侧：节点列表/大纲 -->
+                    <div class="story-sidebar">
+                        <div class="sidebar-header">节点列表</div>
+                        <div id="node-list" class="node-list">
+                            <!-- 动态生成 -->
+                        </div>
+                    </div>
+                    <!-- 中间：画布/预览 -->
+                    <div class="story-canvas" id="story-canvas">
+                        <div class="canvas-placeholder">请选择一个节点进行编辑</div>
+                    </div>
+                    <!-- 右侧：属性编辑 -->
+                    <div class="story-properties" id="node-properties" style="display: none;">
+                        <h3>节点属性</h3>
+                        <div class="form-group">
+                            <label>节点 ID</label>
+                            <input type="text" id="node-id" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>发言人</label>
+                            <input type="text" id="node-speaker">
+                        </div>
+                        <div class="form-group">
+                            <label>头像 Emoji</label>
+                            <input type="text" id="node-avatar">
+                        </div>
+                        <div class="form-group">
+                            <label>对白内容</label>
+                            <textarea id="node-text" rows="3"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>触发事件 (可选)</label>
+                            <input type="text" id="node-event" placeholder="例如: show_map">
+                        </div>
+                        <div class="form-group">
+                            <label>解锁知识卡 (可选)</label>
+                            <select id="node-unlock-card">
+                                <option value="">(无)</option>
+                                <!-- 动态生成 -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>跳转至 (Next Node)</label>
+                            <select id="node-next">
+                                <option value="">(无 / 结束)</option>
+                            </select>
+                        </div>
+
+                        <div id="choices-section">
+                            <h3>选项设定</h3>
+                            <div id="node-choices-list">
+                                <!-- 动态生成 -->
+                            </div>
+                            <button id="add-choice-btn" class="btn btn-secondary btn-sm" style="width:100%">+
+                                添加选项</button>
+                        </div>
+
+                        <div style="margin-top:20px; border-top:1px solid #eee; padding-top:10px;">
+                            <button id="delete-node-btn" class="btn btn-danger btn-sm" style="width:100%">🗑️
+                                删除当前节点</button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="questions-list" id="questions-list">
-                    <!-- 动态生成题目列表 -->
-                </div>
-
-                <div class="panel-actions">
-                    <button id="save-questions-btn" class="btn btn-primary">💾 保存更改</button>
-                    <button id="reset-questions-btn" class="btn btn-secondary">↩️ 恢复默认</button>
+                <!-- 章节属性弹窗 -->
+                <div class="knowledge-popup" id="chapter-settings-modal" style="display: none;">
+                    <div class="knowledge-card" style="width: 500px; max-width: 90%;">
+                        <div class="card-header">
+                            <span class="card-icon">⚙️</span>
+                            <span class="card-label">章节属性设置</span>
+                            <button class="btn-close" id="close-chapter-settings-btn"
+                                style="margin-left:auto; background:none; border:none; font-size:20px; cursor:pointer;">×</button>
+                        </div>
+                        <div style="padding: 20px;">
+                            <div class="form-group">
+                                <label>章节标题</label>
+                                <input type="text" id="chapter-title-input">
+                            </div>
+                            <div class="form-group">
+                                <label>章节描述</label>
+                                <textarea id="chapter-desc-input" rows="3"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>解锁条件 (上一章ID)</label>
+                                <input type="number" id="chapter-unlock-input">
+                            </div>
+                            <div class="form-group">
+                                <label>封面图片 (Emoji 或 URL)</label>
+                                <input type="text" id="chapter-cover-input">
+                            </div>
+                            <div style="margin-top: 20px; text-align: right;">
+                                <button class="btn btn-secondary" id="cancel-chapter-settings-btn">取消</button>
+                                <button class="btn btn-primary" id="save-chapter-settings-btn">保存配置</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -158,6 +255,40 @@
                 </div>
             </div>
 
+
+
+            <!-- 📚 知识库面板 -->
+            <div id="knowledge-panel" class="admin-panel">
+                <div class="panel-header">
+                    <h3>知识卡片管理</h3>
+                    <div class="header-actions">
+                        <button id="add-card-btn" class="btn btn-secondary">➕ 新增卡片</button>
+                        <button id="save-cards-btn" class="btn btn-primary">💾 保存知识库</button>
+                    </div>
+                </div>
+                <div class="knowledge-container">
+                    <div class="card-list" id="knowledge-list">
+                        <!-- 动态生成 -->
+                    </div>
+                    <div class="card-editor" id="card-editor" style="display: none;">
+                        <h3>编辑卡片</h3>
+                        <div class="form-group">
+                            <label>卡片 ID (唯一标识)</label>
+                            <input type="text" id="card-id-input">
+                        </div>
+                        <div class="form-group">
+                            <label>标题</label>
+                            <input type="text" id="card-title-input">
+                        </div>
+                        <div class="form-group">
+                            <label>内容描述</label>
+                            <textarea id="card-content-input" rows="6"></textarea>
+                        </div>
+                        <button id="delete-card-btn" class="btn btn-danger">🗑️ 删除卡片</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- 章节配置面板 -->
             <div id="chapters-panel" class="admin-panel">
                 <div class="chapters-list" id="chapters-list">
@@ -177,6 +308,10 @@
         </section>
     </div>
 
+    <script src="core/StoryLoader.js"></script>
+    <script src="admin_knowledge.js"></script>
+    <script src="admin_story.js"></script>
+    <script src="admin_theme.js"></script>
     <script src="admin.js"></script>
 </body>
 

@@ -61,6 +61,11 @@ const GameEngine = {
         console.log('[GameEngine] Starting new game...');
         this.resetState();
         this.state.gameStartTime = Date.now();
+
+        if (typeof AnalyticsManager !== 'undefined') {
+            AnalyticsManager.trackEvent('game_start', { mode: 'new_game' });
+        }
+
         await this.startChapter(1);
     },
 
@@ -89,11 +94,20 @@ const GameEngine = {
 
         console.log(`[GameEngine] Starting chapter ${chapterId}...`);
 
+
+
         // 加载章节脚本
         this.currentScript = await StoryLoader.loadChapterScript(chapterId);
         this.state.currentChapterId = chapterId;
         this.state.currentDialogueId = 'start';
         this.saveGame();
+
+        if (typeof AnalyticsManager !== 'undefined') {
+            AnalyticsManager.trackEvent('chapter_start', {
+                chapter_id: chapterId,
+                session_id: AnalyticsManager.session.id
+            });
+        }
 
         // 获取章节信息
         const chapter = StoryLoader.getChapter(chapterId);
@@ -172,7 +186,13 @@ const GameEngine = {
             return;
         }
 
-        // 如果使用 TypeWriter，先检查是否正在打字
+        // 如果使用 UIManager，先检查是否正在打字
+        if (this._ui && this._ui.skipTyping && this._ui.isTyping) {
+            this._ui.skipTyping();
+            return;
+        }
+
+        // 兼容旧的 TypeWriter
         if (typeof TypeWriter !== 'undefined' && TypeWriter.isTyping) {
             TypeWriter.skip();
             return;
@@ -194,6 +214,15 @@ const GameEngine = {
         // 计分
         if (choice.score) {
             this.state.score += choice.score;
+        }
+
+        if (typeof AnalyticsManager !== 'undefined') {
+            AnalyticsManager.trackEvent('dialogue_choice', {
+                chapter_id: this.state.currentChapterId,
+                node_id: this.state.currentDialogueId,
+                choice_text: choice.text,
+                score_gain: choice.score || 0
+            });
         }
 
         // 播放下一个对话
@@ -232,8 +261,17 @@ const GameEngine = {
         this.saveGame();
         console.log(`[GameEngine] Chapter ${chapterId} completed`);
 
-        if (this._ui && this._ui.showChapterComplete) {
-            this._ui.showChapterComplete(chapterId);
+        if (typeof AnalyticsManager !== 'undefined') {
+            AnalyticsManager.trackEvent('chapter_complete', {
+                chapter_id: chapterId,
+                score: this.state.score
+            });
+        }
+
+        // 优先使用 _ui，回退到全局 UI
+        const ui = this._ui || (typeof UI !== 'undefined' ? UI : null);
+        if (ui && ui.showChapterComplete) {
+            ui.showChapterComplete(chapterId);
         }
     },
 
@@ -245,8 +283,18 @@ const GameEngine = {
         console.log('[GameEngine] Game completed!');
         this.saveGame();
 
-        if (this._ui && this._ui.showEnding) {
-            this._ui.showEnding();
+        if (typeof AnalyticsManager !== 'undefined') {
+            AnalyticsManager.trackEvent('game_complete', {
+                score: this.state.score,
+                completion_time: Date.now() - this.state.gameStartTime,
+                unlocked_cards_count: this.state.unlockedCards.length
+            });
+        }
+
+        // 优先使用 _ui，回退到全局 UI
+        const ui = this._ui || (typeof UI !== 'undefined' ? UI : null);
+        if (ui && ui.showEnding) {
+            ui.showEnding();
         }
     },
 
@@ -261,6 +309,11 @@ const GameEngine = {
         }
         this.state.unlockedCards.push(cardId);
         this.saveGame();
+
+        if (typeof AnalyticsManager !== 'undefined') {
+            AnalyticsManager.trackEvent('card_unlocked', { card_id: cardId });
+        }
+
         return true;
     },
 

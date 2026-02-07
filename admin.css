@@ -1,5 +1,39 @@
 /* 管理后台样式 */
 
+:root {
+    --bg-dark: #f0f2f5;
+    --bg-card: #ffffff;
+    --bg-elevated: #f9f9f9;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --text-muted: #999999;
+    --border-subtle: #dddddd;
+    --primary: #3498db;
+    --primary-light: #2980b9;
+    --success: #2ecc71;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    --transition-fast: 0.2s;
+    --transition-normal: 0.3s;
+}
+
+[data-theme="dark"] {
+    --bg-dark: #121212;
+    --bg-card: #1e1e1e;
+    --bg-elevated: #2d2d2d;
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --text-muted: #666666;
+    --border-subtle: #333333;
+    --primary: #5dade2;
+    --primary-light: #85c1e9;
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.3);
+}
+
 /* ===== 基础布局 ===== */
 .admin-container {
     min-height: 100vh;
@@ -608,4 +642,285 @@
     .difficulty-cards {
         grid-template-columns: 1fr;
     }
+}
+
+/* Story Editor & Knowledge Base Styles */
+
+.story-editor-container {
+    display: flex;
+    /* 适配屏幕高度，扣除头部导航和padding */
+    height: calc(100vh - 200px);
+    min-height: 500px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.story-sidebar {
+    width: 250px;
+    border-right: 1px solid var(--border-subtle);
+    background: var(--bg-elevated);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.sidebar-header {
+    padding: 10px;
+    font-weight: bold;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.node-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.node-list-item {
+    padding: 8px 12px;
+    margin-bottom: 5px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    transition: all var(--transition-fast);
+}
+
+.node-list-item:hover {
+    background: var(--bg-elevated);
+    border-color: var(--primary-light);
+}
+
+.node-list-item.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.story-canvas {
+    flex: 1;
+    background: var(--bg-dark);
+    /* 画布背景深一点 */
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.canvas-placeholder {
+    color: var(--text-muted);
+    margin-top: 50px;
+}
+
+.preview-node-card {
+    background: var(--bg-card);
+    width: 350px;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-subtle);
+}
+
+.preview-avatar {
+    font-size: 32px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.preview-text {
+    background: var(--bg-elevated);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--text-primary);
+    border: 1px solid var(--border-subtle);
+}
+
+.preview-choice-item {
+    padding: 10px;
+    background: var(--bg-elevated);
+    margin-bottom: 8px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+}
+
+.preview-next-info {
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+    margin-top: 10px;
+}
+
+.story-properties {
+    width: 320px;
+    border-left: 1px solid var(--border-subtle);
+    padding: 20px;
+    background: var(--bg-card);
+    overflow-y: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 修复内部表单元素的显示 */
+#node-choices-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-subtle);
+    margin-bottom: 10px;
+}
+
+.story-properties h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 10px;
+    color: var(--text-primary);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: bold;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 8px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* 选项编辑器 */
+#choices-section {
+    margin-top: 20px;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 15px;
+}
+
+#node-choices-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-elevated);
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px;
+    padding: 5px;
+}
+
+.choice-editor-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: var(--radius-sm);
+}
+
+.choice-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.btn-remove-choice {
+    color: hsl(0, 70%, 60%);
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-size: 12px;
+}
+
+.btn-remove-choice:hover {
+    text-decoration: underline;
+}
+
+/* Knowledge Base Styles */
+.knowledge-container {
+    display: flex;
+    height: calc(100vh - 200px);
+    min-height: 500px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    overflow: hidden;
+}
+
+.card-list {
+    width: 300px;
+    border-right: 1px solid var(--border-subtle);
+    overflow-y: auto;
+    padding: 10px;
+    background: var(--bg-elevated);
+}
+
+.knowledge-card-item {
+    padding: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    color: var(--text-primary);
+}
+
+.knowledge-card-item:hover {
+    border-color: var(--primary-light);
+}
+
+.knowledge-card-item.active {
+    border-color: var(--primary);
+    background: hsla(210, 100%, 50%, 0.1);
+}
+
+.knowledge-card-item div:nth-child(2) {
+    color: var(--text-secondary) !important;
+    /* 强制覆盖内联样式 */
+}
+
+.card-editor {
+    flex: 1;
+    padding: 20px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    overflow-y: auto;
+    /* Allow editor to scroll */
 }

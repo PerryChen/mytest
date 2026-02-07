@@ -37,90 +37,7 @@ const Auth = {
     }
 };
 
-// ==========================================
-// 📝 题目数据管理
-// ==========================================
 
-const QuestionsData = {
-    // 默认题目数据（从 game.js 同步）
-    defaultQuestions: {
-        1: {
-            context: "作为产品经理，你觉得我们现在第一步该做什么？直接画图纸，还是先搞清楚为什么要做这款车？",
-            options: [
-                { text: "直接画图纸，效率第一！", isCorrect: false, feedback: "别急！先想清楚再动手" },
-                { text: "先搞清楚市场需求和商业逻辑", isCorrect: true, feedback: "没错！谋定而后动" }
-            ]
-        },
-        2: {
-            context: "这...如果现在报上去，评审会可能过不了。要不我们先不说，私下先解决？",
-            options: [
-                { text: "听工程师的，先过评审要紧", isCorrect: false, feedback: "危险！EVT严禁报喜不报忧" },
-                { text: "不行，EVT 就是要暴露问题的", isCorrect: true, feedback: "正确！发现问题是功劳" }
-            ]
-        },
-        3: {
-            context: "报告！相关的功能指标和模拟分析都通过了，但是...这个贴纸的颜色稍微有一点点色差。",
-            options: [
-                { text: "色差是小事，忽略", isCorrect: false, feedback: "小心！小问题会变大客诉" },
-                { text: "所有规格必记录并整改", isCorrect: true, feedback: "严谨！DVT是最后确认机会" }
-            ]
-        },
-        4: {
-            context: "PVT 阶段遇到装配不顺畅...",
-            options: [
-                { text: "现场直接换螺丝，保证速度", isCorrect: false, feedback: "停！PVT严禁随意变更" },
-                { text: "寻找临时解决方案，同时按流程提ECN变更，评估影响", isCorrect: true, feedback: "稳定压倒一切！" }
-            ]
-        },
-        5: {
-            context: "柜子已经订好了。船期是下周三。小唯，这批货是急着赶美国黑五促销的吗？",
-            options: [
-                { text: "不急，慢船省钱", isCorrect: false, feedback: "糟糕！会错过黑五促销" },
-                { text: "很急，必须保证时效", isCorrect: true, feedback: "正确！交付时效很重要" }
-            ]
-        },
-        6: {
-            context: "太棒了。这批货怎么分配？官网订单和经销商订单都在催。",
-            options: [
-                { text: "谁催得急给谁", isCorrect: false, feedback: "不行！乱分配会导致渠道打架" },
-                { text: "按预定的上市计划分配", isCorrect: true, feedback: "严格执行计划！" }
-            ]
-        },
-        7: {
-            context: "Mike，别担心。我准备了...",
-            options: [
-                { text: "详细的产品参数表", isCorrect: false, feedback: "参数太枯燥，客户不爱听" },
-                { text: "卖点培训资料和试骑指南", isCorrect: true, feedback: "讲场景，让客户心动！" }
-            ]
-        },
-        8: {
-            context: "现在，去金门大桥试骑一下！",
-            options: [
-                { text: "祝你骑行愉快！", isCorrect: true, feedback: "" }
-            ]
-        }
-    },
-
-    // 获取题目数据
-    get() {
-        const saved = localStorage.getItem('velotric_questions_config');
-        if (saved) {
-            return JSON.parse(saved);
-        }
-        return this.defaultQuestions;
-    },
-
-    // 保存题目数据
-    save(data) {
-        localStorage.setItem('velotric_questions_config', JSON.stringify(data));
-    },
-
-    // 重置为默认
-    reset() {
-        localStorage.removeItem('velotric_questions_config');
-        return this.defaultQuestions;
-    }
-};
 
 // ==========================================
 // ⚙️ 难度配置管理
@@ -211,7 +128,7 @@ const ChaptersData = {
 // ==========================================
 
 const AdminUI = {
-    currentTab: 'questions',
+    currentTab: 'story',
     currentChapter: 1,
 
     init() {
@@ -239,15 +156,11 @@ const AdminUI = {
             btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
         });
 
-        // 章节选择
-        document.getElementById('chapter-select').addEventListener('change', (e) => {
-            this.currentChapter = parseInt(e.target.value);
-            this.renderQuestions();
-        });
+
 
         // 保存按钮
-        document.getElementById('save-questions-btn').addEventListener('click', () => this.saveQuestions());
-        document.getElementById('reset-questions-btn').addEventListener('click', () => this.resetQuestions());
+        // document.getElementById('save-questions-btn').addEventListener('click', () => this.saveQuestions());
+        // document.getElementById('reset-questions-btn').addEventListener('click', () => this.resetQuestions());
         document.getElementById('save-difficulty-btn').addEventListener('click', () => this.saveDifficulty());
         document.getElementById('reset-difficulty-btn').addEventListener('click', () => this.resetDifficulty());
         document.getElementById('save-chapters-btn').addEventListener('click', () => this.saveChapters());
@@ -285,28 +198,13 @@ const AdminUI = {
     showAdminScreen() {
         document.getElementById('login-screen').classList.remove('active');
         document.getElementById('admin-screen').classList.add('active');
-        this.renderChapterSelector();
-        this.renderQuestions();
+        // this.renderQuestions(); // Removed
+        // this.renderQuestions(); // Removed
         this.renderDifficulty();
         this.renderChapters();
     },
 
-    // 动态渲染章节选择器
-    renderChapterSelector() {
-        const chapters = ChaptersData.get();
-        const select = document.getElementById('chapter-select');
-        const currentValue = this.currentChapter;
 
-        select.innerHTML = chapters.map(ch =>
-            `<option value="${ch.id}" ${ch.id === currentValue ? 'selected' : ''}>第${ch.id}章 - ${ch.title}</option>`
-        ).join('');
-
-        // 如果当前章节不存在，重置为第一章
-        if (!chapters.find(ch => ch.id === currentValue) && chapters.length > 0) {
-            this.currentChapter = chapters[0].id;
-            select.value = this.currentChapter;
-        }
-    },
 
     switchTab(tabName) {
         this.currentTab = tabName;
@@ -323,98 +221,7 @@ const AdminUI = {
         document.getElementById(`${tabName}-panel`).classList.add('active');
     },
 
-    // ===== 题目渲染 =====
-    renderQuestions() {
-        const questions = QuestionsData.get();
-        const question = questions[this.currentChapter];
-        const container = document.getElementById('questions-list');
 
-        if (!question) {
-            container.innerHTML = '<p class="no-data">该章节暂无题目</p>';
-            return;
-        }
-
-        container.innerHTML = `
-      <div class="question-card" data-chapter="${this.currentChapter}">
-        <div class="question-header">
-          <div class="question-number">
-            <span>📝</span>
-            <span>第 ${this.currentChapter} 章题目</span>
-          </div>
-        </div>
-        
-        <div class="question-context">
-          <label>场景问题：</label>
-          <textarea id="question-context" placeholder="输入问题描述...">${question.context}</textarea>
-        </div>
-
-        <div class="options-list">
-          ${question.options.map((opt, i) => `
-            <div class="option-item ${opt.isCorrect ? 'correct' : ''}" data-index="${i}">
-              <div class="option-letter">${String.fromCharCode(65 + i)}</div>
-              <input type="text" class="option-text" value="${opt.text}" data-field="text">
-              <button class="option-correct-toggle ${opt.isCorrect ? 'active' : ''}" data-index="${i}">
-                ${opt.isCorrect ? '✓ 正确' : '设为正确'}
-              </button>
-            </div>
-            <div class="feedback-input">
-              <label>反馈语：</label>
-              <input type="text" value="${opt.feedback}" data-index="${i}" data-field="feedback">
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-
-        // 绑定正确答案切换事件
-        container.querySelectorAll('.option-correct-toggle').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const index = parseInt(btn.dataset.index);
-                this.toggleCorrectOption(index);
-            });
-        });
-    },
-
-    toggleCorrectOption(selectedIndex) {
-        const questions = QuestionsData.get();
-        const question = questions[this.currentChapter];
-
-        question.options.forEach((opt, i) => {
-            opt.isCorrect = (i === selectedIndex);
-        });
-
-        QuestionsData.save(questions);
-        this.renderQuestions();
-    },
-
-    saveQuestions() {
-        const questions = QuestionsData.get();
-        const question = questions[this.currentChapter];
-
-        // 获取编辑后的值
-        question.context = document.getElementById('question-context').value;
-
-        document.querySelectorAll('.option-item').forEach((item, i) => {
-            const textInput = item.querySelector('.option-text');
-            question.options[i].text = textInput.value;
-        });
-
-        document.querySelectorAll('.feedback-input input').forEach((input) => {
-            const index = parseInt(input.dataset.index);
-            question.options[index].feedback = input.value;
-        });
-
-        QuestionsData.save(questions);
-        this.showToast('题目保存成功！');
-    },
-
-    resetQuestions() {
-        if (confirm('确定要恢复默认题目吗？所有修改将丢失。')) {
-            QuestionsData.reset();
-            this.renderQuestions();
-            this.showToast('已恢复默认题目');
-        }
-    },
 
     // ===== 难度渲染 =====
     renderDifficulty() {
@@ -522,8 +329,7 @@ const AdminUI = {
         const container = document.getElementById('chapters-list');
         container.scrollTop = container.scrollHeight;
 
-        // 同步更新章节选择器
-        this.renderChapterSelector();
+
     },
 
     deleteChapter(index) {
@@ -542,7 +348,7 @@ const AdminUI = {
             });
             ChaptersData.save(chapters);
             this.renderChapters();
-            this.renderChapterSelector();
+
             this.showToast('章节已删除');
         }
     },
@@ -551,7 +357,7 @@ const AdminUI = {
         if (confirm('确定要恢复默认章节配置吗？')) {
             ChaptersData.reset();
             this.renderChapters();
-            this.renderChapterSelector();
+
             this.showToast('已恢复默认章节');
         }
     },
@@ -568,7 +374,7 @@ const AdminUI = {
         });
 
         ChaptersData.save(chapters);
-        this.renderChapterSelector();
+
         this.showToast('章节配置已保存！');
     },
 

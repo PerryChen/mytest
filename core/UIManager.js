@@ -1,3 +1,7 @@
+// ==========================================
+// 🖥️ UI 管理器 UIManager
+// ==========================================
+
 /**
  * UIManager - 视图层管理器
  * 负责所有 UI 元素的渲染和交互
@@ -11,16 +15,9 @@ const UIManager = {
      * 初始化 UI 管理器
      */
     init() {
-        console.log('[UIManager] Initializing...');
-
         // 缓存 DOM 元素
         this.elements = {
             screens: {
-                intro: document.getElementById('intro-screen'),
-                game: document.getElementById('game-screen'),
-                transition: document.getElementById('transition-screen'),
-                complete: document.getElementById('chapter-complete-screen'),
-                ending: document.getElementById('ending-screen'),
                 cards: document.getElementById('cards-screen')
             },
             header: {
@@ -48,6 +45,39 @@ const UIManager = {
                 closeBtn: document.getElementById('close-knowledge-btn')
             }
         };
+
+        // 尝试自动解锁 AudioContext
+        const unlockAudio = () => {
+            if (typeof AudioManager !== 'undefined' && AudioManager.audioContext) {
+                if (AudioManager.audioContext.state === 'suspended') {
+                    AudioManager.audioContext.resume();
+                }
+            }
+            document.removeEventListener('click', unlockAudio);
+            document.removeEventListener('touchstart', unlockAudio);
+        };
+        document.addEventListener('click', unlockAudio);
+        document.addEventListener('touchstart', unlockAudio);
+
+        // 绑定地图按钮事件
+        const mapBtn = document.getElementById('map-btn');
+        if (mapBtn) {
+            mapBtn.addEventListener('click', () => {
+                console.log('[UIManager] Map button clicked');
+                if (typeof Game !== 'undefined' && Game.showMap) {
+                    Game.showMap();
+                } else {
+                    console.error('[UIManager] Game.showMap not found');
+                }
+            });
+        }
+
+        const closeMapBtn = document.getElementById('close-map-btn');
+        if (closeMapBtn) {
+            closeMapBtn.addEventListener('click', () => {
+                document.getElementById('map-modal').style.display = 'none';
+            });
+        }
 
         console.log('[UIManager] Ready');
     },
@@ -115,13 +145,68 @@ const UIManager = {
         dialog.indicator.style.display = 'none';
 
         // 打字机效果
-        TypeWriter.start(node.text, dialog.text, () => {
+        this._typeWriter(node.text, dialog.text, () => {
+            dialog.indicator.style.display = 'block';
             if (node.choices && node.choices.length > 0) {
                 this._renderChoices(node.choices, onChoiceMade);
-            } else {
-                dialog.indicator.style.display = 'block';
             }
         });
+    },
+
+    /**
+     * 内部打字机实现
+     * @private
+     */
+    _typeWriter(text, element, onComplete) {
+        if (this._typingTimer) clearInterval(this._typingTimer);
+
+        let index = 0;
+        element.textContent = '';
+
+        // 增加当前打字状态标记，用于跳过
+        this.isTyping = true;
+        this.currentTypeWriter = {
+            text,
+            element,
+            onComplete,
+            skip: () => {
+                clearInterval(this._typingTimer);
+                element.textContent = text;
+                this.isTyping = false;
+                if (onComplete) onComplete();
+            }
+        };
+
+        let lastSoundTime = 0; // 初始化上次播放音效的时间
+
+        this._typingTimer = setInterval(() => {
+            if (index < text.length) {
+                element.textContent += text[index];
+                index++;
+
+                // 播放音效 (增加时间节流，避免声音太密集)
+                const now = Date.now();
+                if (now - lastSoundTime > 80 && typeof AudioManager !== 'undefined') {
+                    AudioManager.playTyping();
+                    lastSoundTime = now;
+                }
+            } else {
+                clearInterval(this._typingTimer);
+                this.isTyping = false;
+                if (onComplete) onComplete();
+            }
+        }, 30); // 略微加快打字速度
+    },
+
+    /**
+     * 跳过打字
+     */
+    skipTyping() {
+        if (this.isTyping && this.currentTypeWriter) {
+            this.currentTypeWriter.skip();
+            return true;
+        }
+        return false;
     },
 
     /**

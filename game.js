@@ -33,6 +33,15 @@ const TypeWriter = {
       if (this.currentIndex < this.currentText.length) {
         this.element.textContent += this.currentText[this.currentIndex];
         this.currentIndex++;
+        // 播放打字音效 (每2个字符播放一次，避免过于频繁)
+        if (this.currentIndex % 2 === 0) {
+          if (typeof AudioManager !== 'undefined' && typeof AudioManager.playTyping === 'function') {
+            AudioManager.playTyping();
+          } else {
+            // Fallback or debug
+            // console.warn('AudioManager.playTyping not available');
+          }
+        }
       } else {
         this.complete();
       }
@@ -100,6 +109,11 @@ const UI = {
   popup: null,
 
   init() {
+    // 初始化 Analytics
+    if (typeof AnalyticsManager !== 'undefined') {
+      AnalyticsManager.init();
+    }
+
     this.screens = {
       intro: document.getElementById('intro-screen'),
       game: document.getElementById('game-screen'),
@@ -183,6 +197,15 @@ const UI = {
 
     // DLC Demo 按钮
     document.getElementById('dlc-demo-btn').addEventListener('click', () => Game.startDLC('gtm_demo'));
+
+    // 地图按钮
+    const mapBtn = document.getElementById('map-btn');
+    if (mapBtn) {
+      mapBtn.addEventListener('click', () => UI.showMap());
+    }
+    document.getElementById('close-map-btn').addEventListener('click', () => {
+      document.getElementById('map-modal').style.display = 'none';
+    });
 
     if (GameState.hasCompleted) {
       document.getElementById('chapter-select-btn').style.display = 'flex';
@@ -433,6 +456,60 @@ const UI = {
 
   goBackToEndingOrMenu() {
     this.switchScreen('ending');
+  },
+
+  async showMap() {
+    const modal = document.getElementById('map-modal');
+    const container = document.getElementById('map-visual');
+    if (!modal || !container) return;
+
+    container.innerHTML = '';
+    const chaptersData = StoryLoader.cache.chapters || await StoryLoader.loadChapters();
+    const currentId = GameState.currentChapterId;
+    const completedIds = GameState.completedChapters;
+
+    chaptersData.chapters.forEach((chapter, index) => {
+      const isUnlocked = chapter.id <= currentId || completedIds.includes(chapter.id);
+      const isCompleted = completedIds.includes(chapter.id) || chapter.id < currentId;
+      const isCurrent = chapter.id === currentId;
+
+      let statusClass = 'locked';
+      if (isCurrent) statusClass = 'current unlocked';
+      else if (isCompleted) statusClass = 'completed unlocked';
+      else if (isUnlocked) statusClass = 'unlocked';
+
+      const row = document.createElement('div');
+      row.className = 'map-row';
+      row.innerHTML = `
+        <div class="map-node ${statusClass}" data-id="${chapter.id}">
+          <div class="map-node-icon">${chapter.icon || '📍'}</div>
+          <div class="map-node-info">
+            <div class="map-node-title">第${chapter.id}章 ${chapter.title}</div>
+            <div class="map-node-desc">${chapter.location}</div>
+          </div>
+        </div>
+      `;
+
+      if (statusClass.includes('unlocked')) {
+        row.querySelector('.map-node').addEventListener('click', () => {
+          if (isCurrent) {
+            modal.style.display = 'none';
+            return;
+          }
+          // 仅允许回放已完成章节，或者跳转到当前章节
+          if (isCompleted || isCurrent) {
+            if (confirm(`是否跳转到 第${chapter.id}章？\n注意：当前进度可能会丢失`)) {
+              modal.style.display = 'none';
+              Game.startChapter(chapter.id);
+            }
+          }
+        });
+      }
+
+      container.appendChild(row);
+    });
+
+    modal.style.display = 'flex';
   }
 };
 
@@ -470,20 +547,31 @@ const Game = {
   },
 
   async startChapter(chapterId) {
+    // 委托给 GameEngine，但使用 game.js 的 UI 回调
     const totalChapters = StoryLoader.cache.chapters?.chapters?.length || 8;
     if (chapterId > totalChapters) {
-      UI.showEnding();
+      // 游戏结束逻辑委托给 GameEngine
+      GameEngine._ui = UI; // 确保 GameEngine 使用正确的 UI
+      GameEngine._showEnding();
       return;
     }
 
+    // 调用 GameEngine 处理状态和埋点
     GameEngine.state.currentChapterId = chapterId;
     GameEngine.state.currentDialogueId = 'start';
     GameEngine.saveGame();
 
+    // 埋点由 GameEngine 统一处理
+    if (typeof AnalyticsManager !== 'undefined') {
+      AnalyticsManager.trackEvent('chapter_start', { chapter_id: chapterId });
+    }
+
+    // UI 过渡效果保留在 game.js
     const chapter = StoryLoader.getChapter(chapterId);
     UI.showTransition(chapter, async () => {
       UI.switchScreen('game');
       this.currentScript = await StoryLoader.loadChapterScript(chapterId);
+      GameEngine.currentScript = this.currentScript; // 同步脚本
       this.playDialogue('start');
       UI.updateScene(chapter);
     });
@@ -498,6 +586,10 @@ const Game = {
 
     // 处理 DLC 章节完成
     if (node.event === 'chapter_complete') {
+      // Analytics: 记录章节完成
+      if (typeof AnalyticsManager !== 'undefined') {
+        AnalyticsManager.trackEvent('chapter_complete', { chapter_id: GameState.currentChapterId });
+      }
       if (this.currentDLC) {
         // DLC 模式：播放下一个 DLC 章节
         this.playDLCChapter(this.dlcChapterIndex + 1);
@@ -507,6 +599,13 @@ const Game = {
       return;
     }
     if (node.event === 'game_complete') {
+      // Analytics: 记录游戏通关
+      if (typeof AnalyticsManager !== 'undefined') {
+        AnalyticsManager.trackEvent('game_complete', {
+          score: GameState.score,
+          completion_time: Date.now() - GameEngine.state.gameStartTime
+        });
+      }
       if (this.currentDLC) {
         // DLC 结束
         alert('🎉 恭喜完成 GTM Demo！');
@@ -609,6 +708,10 @@ const Game = {
   async startDLC(dlcId) {
     console.log(`[Game] Starting DLC: ${dlcId}`);
     try {
+      if (typeof AnalyticsManager !== 'undefined') {
+        AnalyticsManager.trackEvent('dlc_start', { dlc_id: dlcId });
+      }
+
       const manifest = await DLCLoader.loadManifest(dlcId);
       this.currentDLC = manifest;
       this.dlcChapterIndex = 0;
@@ -653,8 +756,22 @@ const Game = {
     UI.popup.title.textContent = card.title;
     UI.popup.content.textContent = card.content;
     UI.popup.container.style.display = 'flex';
+  },
+
+  // 供 UIManager 调用
+  showMap: function () {
+    // 委托给 UI 对象（兼容旧代码）或者直接调用 UIManager
+    if (typeof UI !== 'undefined' && UI.showMap) {
+      UI.showMap();
+    } else if (typeof UIManager !== 'undefined' && UIManager.showMap) {
+      // 暂时没有在 UIManager 实现 showMap，所以这里还是依赖 game.js 里的 UI 对象
+      console.warn('UI.showMap not found, trying fallback');
+    }
   }
 };
+
+// 暴露给全局以便 UIManager 调用
+window.Game = Game;
 
 // ==========================================
 // 🚀 初始化

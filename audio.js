@@ -287,5 +287,46 @@ const AudioManager = {
         } catch (e) {
             // 忽略音频错误
         }
+    },
+
+    /**
+     * 播放打字音效 (柔和通用版)
+     */
+    playTyping() {
+        if (!this.enabled || !this.audioContext) return;
+
+        // 如果被挂起，尝试恢复
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume().catch(() => { });
+        }
+
+        try {
+            const t = this.audioContext.currentTime;
+
+            const osc = this.audioContext.createOscillator();
+            const gain = this.audioContext.createGain();
+
+            osc.connect(gain);
+            gain.connect(this.audioContext.destination);
+
+            // 极简正弦波 (最不刺耳的声音)
+            osc.type = 'sine';
+            // 固定频率，类似老式打字机或系统提示音的 "滴"
+            // 800Hz 是一个比较清晰但不尖锐的频率
+            osc.frequency.setValueAtTime(800, t);
+
+            // 极短的包络，避免拖泥带水
+            gain.gain.setValueAtTime(0.05, t); // 音量调低
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.03); // 30ms 极短促
+
+            osc.start(t);
+            osc.stop(t + 0.03);
+
+        } catch (e) {
+            // 忽略音频错误
+        }
     }
 };
+
+// 确保全局暴露
+window.AudioManager = AudioManager;

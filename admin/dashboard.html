@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据看板 | Velotric 游戏分析</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="../admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        html,
+        body {
+            overflow-y: auto !important;
+            height: auto !important;
+            min-height: 100vh;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding-bottom: 50px;
+            /* Ensure space at bottom */
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-subtle);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .chart-container {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-subtle);
+            margin-bottom: 20px;
+            height: 400px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .data-table th {
+            background: var(--bg-elevated);
+            font-weight: 600;
+        }
+
+        .btn-refresh {
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <header class="header">
+            <div>
+                <h1>📊 游戏数据看板</h1>
+                <p>Local Development Mode</p>
+            </div>
+            <div>
+                <button class="btn-refresh" onclick="renderDashboard()">🔄 刷新数据</button>
+                <button class="btn btn-secondary" onclick="simulateData()">🧪 模拟数据</button>
+                <button id="theme-toggle" class="btn btn-secondary" title="切换深色/浅色模式">🌓</button>
+                <button class="btn btn-secondary" onclick="clearData()">🗑️ 清空本地</button>
+                <button class="btn btn-secondary" style="background:#dc3545" onclick="clearRemoteData()">☁️
+                    清空远程</button>
+                <a href="../index.html" class="btn btn-ghost">返回游戏</a>
+            </div>
+        </header>
+
+        <!-- 关键指标卡片 -->
+        <!-- 关键指标卡片 -->
+        <div class="stats-grid"
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px;">
+            <div class="stat-card">
+                <div class="stat-label">总浏览量 (PV)</div>
+                <div class="stat-value" id="pv-count">0</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Total Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">独立访客 (UV)</div>
+                <div class="stat-value" id="uv-count">0</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Unique Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">启动次数</div>
+                <div class="stat-value" id="launch-count">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">通关率 (Pass Rate)</div>
+                <div class="stat-value" id="pass-rate">0%</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">Completes / Starts</div>
+            </div>
+        </div>
+
+        <!-- 图表区域 -->
+        <div class="grid"
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+            <!-- 转化漏斗 (占满整行) -->
+            <div class="chart-container" style="grid-column: 1 / -1;">
+                <h3>玩家转化漏斗 (Conversion Funnel)</h3>
+                <canvas id="funnelChart" style="max-height: 300px;"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>章节活跃度</h3>
+                <canvas id="chapterChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>事件分布</h3>
+                <canvas id="eventPieChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 最近事件列表 -->
+        <div class="chart-container" style="height: auto; overflow-x: auto;">
+            <h3>最近实时事件 (Latest 20)</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>事件类型</th>
+                        <th>Session ID</th>
+                        <th>详情</th>
+                    </tr>
+                </thead>
+                <tbody id="event-log-body">
+                    <!-- 动态生成 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="../core/AnalyticsManager.js"></script>
+    <script src="../admin_theme.js"></script>
+    <script>
+        // 简单的 Mock 
+        const Analytics = AnalyticsManager;
+
+        // 初始化 Analytics (触发 Supabase 连接)
+        Analytics.init();
+
+        async function renderDashboard() {
+            // 显示加载状态
+            const tbody = document.getElementById('event-log-body');
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">Loading data from Supabase...</td></tr>';
+
+            // 获取远程数据
+            let data = await Analytics.getRemoteData();
+
+            // 如果没有远程数据（或出错），回退到本地
+            if (!data || data.length === 0) {
+                console.log('No remote data, using local fallback');
+                data = Analytics.getLocalData().reverse();
+                document.querySelector('.header p').textContent = 'Local Development Mode (Remote Unavailable)';
+            } else {
+                document.querySelector('.header p').textContent = 'Remote Data Mode (Supabase Connected)';
+            }
+
+            // 1. 更新卡片
+            // PV: page_view acts (approx by game_launch or just total events, let's use game_launch as session start)
+            const launches = data.filter(e => e.event === 'game_launch').length;
+            const uniqueUsers = new Set(data.map(e => e.user_id)).size;
+            const gameCompletes = data.filter(e => e.event === 'game_complete').length;
+
+            document.getElementById('pv-count').textContent = data.length; // Total Events
+            document.getElementById('uv-count').textContent = uniqueUsers; // Unique Users
+            document.getElementById('launch-count').textContent = launches;
+
+            // Pass Rate
+            const passRate = launches > 0 ? ((gameCompletes / launches) * 100).toFixed(1) : 0;
+            document.getElementById('pass-rate').textContent = `${passRate}%`;
+
+
+
+            // 2. 更新表格
+            tbody.innerHTML = '';
+            data.slice(0, 20).forEach(e => {
+                const tr = document.createElement('tr');
+                const ts = e.timestamp || e.client_timestamp;
+                const time = ts ? new Date(ts).toLocaleTimeString() : 'N/A';
+
+                // 格式化详情
+                let details = '';
+                const excludeKeys = ['event', 'sessionId', 'userId', 'timestamp', '_id', 'event_name', 'session_id', 'user_id', 'client_timestamp', 'properties'];
+                Object.keys(e).forEach(k => {
+                    if (!excludeKeys.includes(k) && e[k] !== undefined) {
+                        details += `${k}: ${e[k]} | `;
+                    }
+                });
+
+                const fullSessionId = e.sessionId || e.session_id || 'N/A';
+                tr.innerHTML = `
+                    <td>${time}</td>
+                    <td><span style="font-weight:bold; color:var(--primary)">${e.event}</span></td>
+                    <td style="font-family:monospace; font-size:0.8em">
+                        <span title="${fullSessionId}" style="cursor:help; border-bottom:1px dashed #999;">
+                            ${fullSessionId.substring(0, 12)}...
+                        </span>
+                    </td>
+                    <td style="font-size:0.9em; color:var(--text-secondary); white-space: pre-wrap;">${details}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // 3. 渲染图表
+            renderCharts(data);
+        }
+
+        let chapterChartInst = null;
+        let pieChartInst = null;
+        let funnelChartInst = null;
+
+        function renderCharts(data) {
+            // --- 1. Funnel Data ---
+            // Steps: Launch -> Chapter 1 Start -> Chapter 1 Complete -> Game Complete
+            const uniqueSessions = new Set(data.map(e => e.session_id || e.sessionId));
+            const funnelCounts = {
+                launch: uniqueSessions.size, // Approximation: All unique sessions
+                chap1_start: new Set(data.filter(e => e.event === 'chapter_start' && e.chapter_id == 1).map(e => e.session_id || e.sessionId)).size,
+                chap1_end: new Set(data.filter(e => e.event === 'chapter_complete' && e.chapter_id == 1).map(e => e.session_id || e.sessionId)).size,
+                game_end: new Set(data.filter(e => e.event === 'game_complete').map(e => e.session_id || e.sessionId)).size
+            };
+
+            const ctxFunnel = document.getElementById('funnelChart').getContext('2d');
+            if (funnelChartInst) funnelChartInst.destroy();
+
+            funnelChartInst = new Chart(ctxFunnel, {
+                type: 'bar',
+                data: {
+                    labels: ['游戏启动 (Launch)', '开始第1章', '完成第1章', '通关 (Game Complete)'],
+                    datasets: [{
+                        label: '用户数',
+                        data: [
+                            funnelCounts.launch,
+                            funnelCounts.chap1_start,
+                            funnelCounts.chap1_end,
+                            funnelCounts.game_end
+                        ],
+                        backgroundColor: ['#3498db', '#2980b9', '#8e44ad', '#27ae60'],
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Horizontal bar chart acting as funnel
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    const value = context.raw;
+                                    const prevValue = context.dataIndex > 0 ? context.dataset.data[context.dataIndex - 1] : value;
+                                    const conversion = context.dataIndex > 0 ? Math.round((value / prevValue) * 100) : 100;
+                                    return `${value} (转化率: ${conversion}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // --- 2. Chapter Data ---
+            // 准备数据：章节开始 vs 完成
+            const chapterStarts = {};
+            const chapterEnds = {};
+
+            data.forEach(e => {
+                const cid = e.chapter_id;
+                if (e.event === 'chapter_start' && cid) chapterStarts[cid] = (chapterStarts[cid] || 0) + 1;
+                if (e.event === 'chapter_complete' && cid) chapterEnds[cid] = (chapterEnds[cid] || 0) + 1;
+            });
+
+            const chapters = Object.keys({ ...chapterStarts, ...chapterEnds }).sort((a, b) => a - b);
+
+            // 渲染柱状图
+            const ctx1 = document.getElementById('chapterChart').getContext('2d');
+            if (chapterChartInst) chapterChartInst.destroy();
+
+            chapterChartInst = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: chapters.map(c => `第${c}章`),
+                    datasets: [
+                        { label: '开始', data: chapters.map(c => chapterStarts[c] || 0), backgroundColor: '#36A2EB' },
+                        { label: '完成', data: chapters.map(c => chapterEnds[c] || 0), backgroundColor: '#4BC0C0' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // 渲染饼图：事件分布
+            const eventCounts = {};
+            data.forEach(e => {
+                eventCounts[e.event] = (eventCounts[e.event] || 0) + 1;
+            });
+
+            const ctx2 = document.getElementById('eventPieChart').getContext('2d');
+            if (pieChartInst) pieChartInst.destroy();
+
+            pieChartInst = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(eventCounts),
+                    datasets: [{
+                        data: Object.values(eventCounts),
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+
+
+        function simulateData() {
+            const mockEvents = [];
+            const numPlayers = 10; // Simulate 10 players
+
+            for (let p = 0; p < numPlayers; p++) {
+                const sessionId = `sess_${p}_${Date.now()}`;
+                const userId = `user_00${p % 5 + 1}`;
+                const baseTime = Date.now() - Math.floor(Math.random() * 86400000); // Within last 24 hours
+
+                // Each player goes through a journey with decreasing probability of continuing
+                // Launch: 100%
+                mockEvents.push({
+                    event: 'game_launch', event_name: 'game_launch',
+                    user_id: userId, session_id: sessionId,
+                    timestamp: baseTime, chapter_id: 0
+                });
+
+                // Chapter 1 Start: 90%
+                if (Math.random() < 0.9) {
+                    mockEvents.push({
+                        event: 'chapter_start', event_name: 'chapter_start',
+                        user_id: userId, session_id: sessionId,
+                        timestamp: baseTime + 5000, chapter_id: 1
+                    });
+
+                    // Chapter 1 Complete: 70%
+                    if (Math.random() < 0.7) {
+                        mockEvents.push({
+                            event: 'chapter_complete', event_name: 'chapter_complete',
+                            user_id: userId, session_id: sessionId,
+                            timestamp: baseTime + 60000, chapter_id: 1
+                        });
+
+                        // Game Complete: 40%
+                        if (Math.random() < 0.4) {
+                            mockEvents.push({
+                                event: 'game_complete', event_name: 'game_complete',
+                                user_id: userId, session_id: sessionId,
+                                timestamp: baseTime + 300000, chapter_id: 8, score: Math.floor(Math.random() * 100)
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Save to local storage
+            localStorage.setItem('velotric_analytics_local', JSON.stringify(mockEvents));
+
+            // Reload
+            renderDashboard();
+            alert(`已模拟 ${numPlayers} 个玩家的游戏流程！(共 ${mockEvents.length} 条事件)`);
+        }
+
+        function clearData() {
+            if (confirm('确定清空所有本地数据吗？')) {
+                Analytics.clearLocalData();
+                renderDashboard();
+            }
+        }
+
+        async function clearRemoteData() {
+            if (!confirm('⚠️ 确定清空所有远程 Supabase 数据吗？此操作不可恢复！')) {
+                return;
+            }
+
+            try {
+                const supabaseClient = Analytics._supabase;
+                if (!supabaseClient) {
+                    alert('❌ Supabase 未连接，无法清空远程数据');
+                    return;
+                }
+
+                const { error } = await supabaseClient
+                    .from('game_events')
+                    .delete()
+                    .not('event_name', 'is', null); // 删除所有 event_name 不为 null 的数据
+
+                if (error) {
+                    alert('❌ 清空失败: ' + error.message);
+                    console.error('[Dashboard] Clear remote error:', error);
+                } else {
+                    alert('✅ 远程数据已清空！');
+                    renderDashboard();
+                }
+            } catch (e) {
+                alert('❌ 清空失败: ' + e.message);
+                console.error('[Dashboard] Clear remote exception:', e);
+            }
+        }
+
+        // Init
+        renderDashboard();
+    </script>
+</body>
+
+</html>
