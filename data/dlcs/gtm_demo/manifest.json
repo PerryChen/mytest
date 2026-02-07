@@ -1,0 +1,35 @@
+{
+    "id": "gtm_demo",
+    "name": "GTM 上市流程",
+    "description": "体验产品 Go To Market 全流程",
+    "version": "1.0.0",
+    "author": "Velotric Team",
+    "chapters": [
+        {
+            "id": "gtm_1",
+            "title": "定价策略",
+            "location": "深圳·会议室",
+            "sceneClass": "scene-office",
+            "date": "上市前3个月",
+            "scriptFile": "gtm_chapter_1.json"
+        },
+        {
+            "id": "gtm_2",
+            "title": "营销预热",
+            "location": "线上·社交媒体",
+            "sceneClass": "scene-office",
+            "date": "上市前1个月",
+            "scriptFile": "gtm_chapter_2.json"
+        }
+    ],
+    "knowledgeCards": {
+        "PRICING_STRATEGY": {
+            "title": "产品定价",
+            "content": "定价不只是成本加利润。要考虑市场定位、竞品价格、用户心理价位、渠道利润空间等多个维度。"
+        },
+        "MARKETING_FUNNEL": {
+            "title": "营销漏斗",
+            "content": "从认知 → 兴趣 → 考虑 → 购买 → 忠诚，每个阶段需要不同的营销策略和内容。"
+        }
+    }
+}

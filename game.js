@@ -181,6 +181,9 @@ const UI = {
 
     document.getElementById('sound-toggle-btn').addEventListener('click', () => AudioManager.toggleSound());
 
+    // DLC Demo 按钮
+    document.getElementById('dlc-demo-btn').addEventListener('click', () => Game.startDLC('gtm_demo'));
+
     if (GameState.hasCompleted) {
       document.getElementById('chapter-select-btn').style.display = 'flex';
     }
@@ -493,12 +496,25 @@ const Game = {
       return;
     }
 
+    // 处理 DLC 章节完成
     if (node.event === 'chapter_complete') {
-      UI.showChapterComplete(GameState.currentChapterId);
+      if (this.currentDLC) {
+        // DLC 模式：播放下一个 DLC 章节
+        this.playDLCChapter(this.dlcChapterIndex + 1);
+      } else {
+        UI.showChapterComplete(GameState.currentChapterId);
+      }
       return;
     }
     if (node.event === 'game_complete') {
-      UI.showEnding();
+      if (this.currentDLC) {
+        // DLC 结束
+        alert('🎉 恭喜完成 GTM Demo！');
+        this.currentDLC = null;
+        UI.switchScreen('intro');
+      } else {
+        UI.showEnding();
+      }
       return;
     }
 
@@ -507,7 +523,12 @@ const Game = {
     if (node.unlockCard) {
       if (GameEngine.unlockCard(node.unlockCard)) {
         this.pendingDialogueNode = node;
-        UI.showKnowledgeCard(node.unlockCard);
+        // 支持 DLC 知识卡
+        if (this.currentDLC) {
+          this.showDLCKnowledgeCard(node.unlockCard);
+        } else {
+          UI.showKnowledgeCard(node.unlockCard);
+        }
         return;
       }
     }
@@ -579,6 +600,59 @@ const Game = {
 
   goBackToEndingOrMenu() {
     UI.goBackToEndingOrMenu();
+  },
+
+  // ===== DLC 功能 =====
+  currentDLC: null,
+  dlcChapterIndex: 0,
+
+  async startDLC(dlcId) {
+    console.log(`[Game] Starting DLC: ${dlcId}`);
+    try {
+      const manifest = await DLCLoader.loadManifest(dlcId);
+      this.currentDLC = manifest;
+      this.dlcChapterIndex = 0;
+      await this.playDLCChapter(0);
+    } catch (error) {
+      console.error('[Game] Failed to load DLC:', error);
+      alert('DLC 加载失败');
+    }
+  },
+
+  async playDLCChapter(index) {
+    if (!this.currentDLC || index >= this.currentDLC.chapters.length) {
+      console.log('[Game] DLC completed!');
+      this.currentDLC = null;
+      UI.switchScreen('intro');
+      return;
+    }
+
+    const chapter = this.currentDLC.chapters[index];
+    this.dlcChapterIndex = index;
+
+    console.log(`[Game] Playing DLC chapter: ${chapter.title}`);
+
+    // 加载章节脚本
+    const script = await DLCLoader.loadScript(this.currentDLC.id, chapter.scriptFile);
+    this.currentScript = script;
+    GameEngine.currentScript = script;
+
+    // 显示过渡画面
+    UI.showTransition(chapter, () => {
+      UI.switchScreen('game');
+      this.playDialogue('start');
+      UI.updateScene(chapter);
+    });
+  },
+
+  // 重写 showKnowledgeCard 以支持 DLC 卡片
+  showDLCKnowledgeCard(cardId) {
+    if (!this.currentDLC) return;
+    const card = DLCLoader.getKnowledgeCard(this.currentDLC.id, cardId);
+    if (!card) return;
+    UI.popup.title.textContent = card.title;
+    UI.popup.content.textContent = card.content;
+    UI.popup.container.style.display = 'flex';
   }
 };
 

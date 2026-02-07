@@ -1,0 +1,51 @@
+{
+    "start": {
+        "speaker": "市场总监 Lisa",
+        "avatar": "👩‍💼",
+        "text": "V，Discover 3 马上要上市了。定价是个大问题，你怎么看？",
+        "next": "pricing_question"
+    },
+    "pricing_question": {
+        "speaker": "小唯",
+        "avatar": "🧑",
+        "text": "我们需要综合考虑...",
+        "choices": [
+            {
+                "text": "成本加20%利润，简单直接",
+                "next": "cost_plus",
+                "score": 50,
+                "isCorrect": false,
+                "feedback": "定价不能只看成本！要考虑市场和竞品"
+            },
+            {
+                "text": "分析竞品定价和目标用户支付意愿",
+                "next": "market_analysis",
+                "score": 100,
+                "isCorrect": true,
+                "feedback": "正确！定价是市场策略的核心"
+            }
+        ]
+    },
+    "cost_plus": {
+        "speaker": "市场总监 Lisa",
+        "avatar": "👩‍💼",
+        "text": "如果只看成本，我们可能定价过低失去利润，或过高失去市场。必须做竞品分析！",
+        "next": "market_analysis"
+    },
+    "market_analysis": {
+        "speaker": "小唯",
+        "avatar": "🧑",
+        "text": "我调研了主要竞品：Aventon 定价 $1,399，RadPower 定价 $1,499。考虑到我们的差异化卖点...",
+        "unlockCard": "PRICING_STRATEGY",
+        "next": "final_price"
+    },
+    "final_price": {
+        "speaker": "市场总监 Lisa",
+        "avatar": "👩‍💼",
+        "text": "很好！$1,349 的定价既有竞争力，又保证了渠道利润空间。",
+        "next": "end_chapter"
+    },
+    "end_chapter": {
+        "event": "chapter_complete"
+    }
+}

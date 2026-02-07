@@ -1,0 +1,54 @@
+{
+    "start": {
+        "speaker": "品牌经理 Jack",
+        "avatar": "👨‍🎨",
+        "text": "上市前一个月，我们要开始预热了。社交媒体策略怎么定？",
+        "next": "strategy_question"
+    },
+    "strategy_question": {
+        "speaker": "小唯",
+        "avatar": "🧑",
+        "text": "预热阶段的目标是...",
+        "choices": [
+            {
+                "text": "直接发产品参数，越详细越好",
+                "next": "boring_content",
+                "score": 50,
+                "isCorrect": false,
+                "feedback": "参数党是少数！大多数用户更关心使用场景"
+            },
+            {
+                "text": "讲故事，让用户想象骑行场景",
+                "next": "storytelling",
+                "score": 100,
+                "isCorrect": true,
+                "feedback": "场景营销更能打动人心！"
+            }
+        ]
+    },
+    "boring_content": {
+        "speaker": "品牌经理 Jack",
+        "avatar": "👨‍🎨",
+        "text": "数据表格没人看的！要让用户想象自己骑着车在金门大桥上吹风的感觉。",
+        "next": "storytelling"
+    },
+    "storytelling": {
+        "speaker": "小唯",
+        "avatar": "🧑",
+        "text": "我们可以做一个'通勤革命'系列视频，展示普通上班族用 Discover 3 节省时间、享受骑行的故事。",
+        "unlockCard": "MARKETING_FUNNEL",
+        "next": "campaign_launch"
+    },
+    "campaign_launch": {
+        "speaker": "品牌经理 Jack",
+        "avatar": "👨‍🎨",
+        "text": "太棒了！这个创意我喜欢。我们在 Instagram 和 YouTube 同步推送！",
+        "next": "end_dlc"
+    },
+    "end_dlc": {
+        "speaker": "旁白",
+        "avatar": "📢",
+        "text": "恭喜！你完成了 GTM Demo。这只是 DLC 的一个小示例，完整版将包含更多 Go To Market 流程。",
+        "event": "game_complete"
+    }
+}
