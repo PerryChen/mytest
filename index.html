@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ebike出行造车记 | Velotric 新人培训</title>
+  <meta name="description" content="跟随小维的成长故事，体验 Velotric 产品从需求到用户手中的完整旅程">
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+
+<body>
+  <div class="app-container">
+    <!-- ===== 开场界面 ===== -->
+    <section id="intro-screen" class="screen active">
+      <div class="intro-content">
+        <div class="logo-area">
+          <span class="bike-icon">🚴‍♂️</span>
+        </div>
+        <h1 class="game-title">Ebike新产品开发</h1>
+        <p class="game-subtitle">一个新人的成长故事</p>
+        <p class="game-desc">跟随小维，走过从需求到骑行的完整旅程</p>
+
+        <div class="journey-preview">
+          <div class="journey-node">🏢<span>深圳</span></div>
+          <div class="journey-arrow">→</div>
+          <div class="journey-node">🏭<span>工厂</span></div>
+          <div class="journey-arrow">→</div>
+          <div class="journey-node">🚢<span>海运</span></div>
+          <div class="journey-arrow">→</div>
+          <div class="journey-node">🇺🇸<span>美国</span></div>
+          <div class="journey-arrow">→</div>
+          <div class="journey-node">🚲<span>骑行</span></div>
+        </div>
+
+        <div class="intro-actions">
+          <button id="new-game-btn" class="btn btn-primary btn-large">
+            <span>▶</span> 开始新游戏
+          </button>
+          <button id="continue-game-btn" class="btn btn-secondary" style="display: none;">
+            <span>↻</span> 继续游戏
+          </button>
+          <button id="chapter-select-btn" class="btn btn-secondary" style="display: none;">
+            <span>📖</span> 章节选择
+          </button>
+          <a href="admin.html" class="btn btn-ghost" id="admin-link">
+            <span>⚙️</span> 配置管理
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 章节选择弹窗 ===== -->
+    <div class="chapter-select-modal" id="chapter-select-modal" style="display: none;">
+      <div class="chapter-select-content">
+        <h2>📖 章节选择</h2>
+        <p class="chapter-select-desc">选择任意章节重新体验</p>
+        <div class="chapter-list" id="chapter-list">
+          <!-- 动态生成 -->
+        </div>
+        <button class="btn btn-secondary" id="close-chapter-select-btn">关闭</button>
+      </div>
+    </div>
+
+    <!-- ===== 游戏主界面 ===== -->
+    <section id="game-screen" class="screen">
+      <!-- 顶部信息栏 -->
+      <header class="game-header">
+        <div class="chapter-info">
+          <span class="chapter-badge" id="chapter-badge">第1章</span>
+          <span class="chapter-title" id="chapter-title">入职第一天</span>
+          <span class="chapter-date" id="chapter-date">2月</span>
+        </div>
+        <!-- 进度条 -->
+        <div class="progress-bar-container">
+          <div class="progress-text" id="progress-text">1 / 8</div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill" style="width: 12.5%;"></div>
+          </div>
+        </div>
+        <div class="location-info">
+          <span class="location-icon">📍</span>
+          <span class="location-text" id="location-text">深圳·办公室</span>
+        </div>
+        <button class="btn-sound" id="sound-toggle-btn" title="开关音效">🔊</button>
+        <button class="btn-menu" id="menu-btn">☰</button>
+      </header>
+
+      <!-- 场景背景区 -->
+      <div class="scene-container" id="scene-container">
+        <div class="scene-background" id="scene-bg"></div>
+
+        <!-- 场景中的可点击物品 -->
+        <div class="scene-items" id="scene-items">
+          <!-- 动态生成 -->
+        </div>
+
+        <!-- 角色立绘区 -->
+        <div class="character-area" id="character-area">
+          <!-- 动态生成角色 -->
+        </div>
+      </div>
+
+      <!-- 对话框区域 -->
+      <div class="dialog-container" id="dialog-container">
+        <div class="dialog-box">
+          <div class="speaker-info">
+            <div class="speaker-avatar" id="speaker-avatar">👤</div>
+            <span class="speaker-name" id="speaker-name">???</span>
+          </div>
+          <div class="dialog-content">
+            <p class="dialog-text" id="dialog-text">对话内容加载中...</p>
+          </div>
+          <div class="dialog-indicator" id="dialog-indicator">▼</div>
+        </div>
+
+        <!-- 选项区域 -->
+        <div class="choices-container" id="choices-container" style="display: none;">
+          <!-- 选项动态生成 -->
+        </div>
+      </div>
+
+      <!-- 知识卡弹窗 -->
+      <div class="knowledge-popup" id="knowledge-popup" style="display: none;">
+        <div class="knowledge-card">
+          <div class="card-header">
+            <span class="card-icon">💡</span>
+            <span class="card-label">知识卡解锁</span>
+          </div>
+          <h3 class="card-title" id="knowledge-title">知识点标题</h3>
+          <p class="card-content" id="knowledge-content">知识点内容...</p>
+          <button class="btn btn-primary" id="close-knowledge-btn">收藏并继续</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 章节过渡界面 ===== -->
+    <section id="transition-screen" class="screen">
+      <div class="transition-content">
+        <div class="transition-icon" id="transition-icon">🏢</div>
+        <h2 class="transition-chapter" id="transition-chapter">第1章</h2>
+        <h1 class="transition-title" id="transition-title">入职第一天</h1>
+        <p class="transition-location" id="transition-location">📍 深圳·Velotric研发中心</p>
+        <div class="transition-loading">
+          <div class="loading-bar"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 章节完成界面 ===== -->
+    <section id="chapter-complete-screen" class="screen">
+      <div class="complete-content">
+        <div class="complete-icon">✨</div>
+        <h2 class="complete-title">章节完成</h2>
+        <h3 class="complete-chapter" id="complete-chapter-name">第1章：入职第一天</h3>
+
+        <div class="chapter-summary">
+          <h4>📚 本章收获</h4>
+          <div class="knowledge-cards-earned" id="cards-earned">
+            <!-- 动态生成 -->
+          </div>
+        </div>
+
+        <div class="chapter-stats">
+          <div class="stat-item">
+            <span class="stat-value" id="chapter-score">100</span>
+            <span class="stat-label">章节得分</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="decisions-count">3</span>
+            <span class="stat-label">关键决策</span>
+          </div>
+        </div>
+
+        <div class="complete-actions">
+          <button class="btn btn-secondary" id="review-chapter-btn">回顾本章</button>
+          <button class="btn btn-primary" id="next-chapter-btn">下一章</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 游戏通关界面 ===== -->
+    <section id="ending-screen" class="screen">
+      <div class="ending-content">
+        <div class="ending-animation">
+          <span>🎊</span><span>🏆</span><span>🎊</span>
+        </div>
+        <h1 class="ending-title">恭喜通关！</h1>
+        <p class="ending-subtitle">小维的成长之旅圆满结束</p>
+
+        <div class="journey-complete">
+          <p>从深圳办公室到旧金山金门大桥</p>
+          <p>你见证了一辆 Velotric Discover 3 的诞生</p>
+        </div>
+
+        <div class="final-stats">
+          <div class="stat-item">
+            <span class="stat-icon">📖</span>
+            <span class="stat-value" id="total-chapters">8</span>
+            <span class="stat-label">完成章节</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">💡</span>
+            <span class="stat-value" id="total-cards">12</span>
+            <span class="stat-label">知识卡</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-icon">⭐</span>
+            <span class="stat-value" id="total-score">800</span>
+            <span class="stat-label">总分</span>
+          </div>
+        </div>
+
+        <!-- 成就展示区域 -->
+        <div class="achievements-section" id="achievements-section">
+          <h3>🏆 获得成就</h3>
+          <div class="achievements-list" id="achievements-list">
+            <!-- 动态生成 -->
+          </div>
+        </div>
+
+        <!-- 名称输入区域 -->
+        <div class="name-input-section" id="name-input-section">
+          <label class="name-input-label">输入你的名字，留下通关纪念吧！</label>
+          <div class="name-input-wrapper">
+            <input type="text" id="player-name-input" class="name-input" placeholder="请输入你的名字" maxlength="20">
+            <button class="btn btn-primary" id="confirm-name-btn">确认</button>
+          </div>
+        </div>
+
+        <!-- 证书（默认隐藏，输入名称后显示） -->
+        <div class="certificate" id="certificate" style="display: none;">
+          <div class="cert-content">
+            <span class="cert-icon">📜</span>
+            <h3>Velotric 产品开发全流程认证</h3>
+            <div class="cert-player-name">
+              <span class="cert-name-label">兹证明</span>
+              <span class="cert-name" id="cert-player-name">--</span>
+              <span class="cert-name-label">已完成全部培训</span>
+            </div>
+            <p class="cert-journey">需求 → EVT → DVT → PVT → MP → 海运 → 上架 → 骑行</p>
+            <p class="cert-date" id="cert-date"></p>
+          </div>
+          <div style="text-align: center; margin-top: 16px;">
+            <button class="btn btn-primary" id="download-cert-btn">📥 保存证书</button>
+          </div>
+        </div>
+
+        <div class="ending-actions">
+          <button class="btn btn-secondary" id="view-cards-btn">查看知识卡</button>
+          <button class="btn btn-primary" id="play-again-btn">再玩一次</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 知识卡图鉴界面 ===== -->
+    <section id="cards-screen" class="screen">
+      <header class="screen-header">
+        <button class="btn-back" id="cards-back-btn">← 返回</button>
+        <h2>💡 知识卡图鉴</h2>
+        <div class="cards-count" id="cards-count">0/12</div>
+      </header>
+      <div class="cards-grid" id="cards-grid">
+        <!-- 动态生成 -->
+      </div>
+    </section>
+
+    <!-- ===== 暂停菜单 ===== -->
+    <div class="pause-menu" id="pause-menu" style="display: none;">
+      <div class="pause-content">
+        <h3>游戏暂停</h3>
+        <button class="btn btn-primary" id="resume-btn">继续游戏</button>
+        <button class="btn btn-secondary" id="cards-btn">知识卡图鉴</button>
+        <button class="btn btn-secondary" id="save-quit-btn">保存并退出</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="audio.js"></script>
+  <script src="game.js"></script>
+</body>
+
+</html>
