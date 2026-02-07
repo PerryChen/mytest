@@ -1,0 +1,85 @@
+{
+    "version": "2.0",
+    "chapters": [
+        {
+            "id": 1,
+            "title": "入职第一天",
+            "location": "深圳·办公室",
+            "sceneClass": "scene-office",
+            "description": "理解产品开发的起点：MRD与PRD",
+            "date": "2025年2月",
+            "initialDialogue": "start",
+            "scriptFile": "chapter_1.json"
+        },
+        {
+            "id": 2,
+            "title": "实验室风云",
+            "location": "昆山·EVT样车间",
+            "sceneClass": "scene-lab",
+            "description": "工程验证阶段：发现问题是功劳",
+            "date": "2025年4月",
+            "initialDialogue": "start",
+            "scriptFile": "chapter_2.json"
+        },
+        {
+            "id": 3,
+            "title": "开模倒计时",
+            "location": "昆山·模具工厂",
+            "sceneClass": "scene-factory",
+            "description": "设计验证阶段：最后的设计确认",
+            "date": "2025年7月",
+            "initialDialogue": "start",
+            "scriptFile": "chapter_3.json"
+        },
+        {
+            "id": 4,
+            "title": "流水线挑战",
+            "location": "常州·总装工厂",
+            "sceneClass": "scene-assembly",
+            "description": "生产验证阶段：稳定压倒一切",
+            "date": "2025年9月",
+            "initialDialogue": "start",
+            "scriptFile": "chapter_4.json"
+        },
+        {
+            "id": 5,
+            "title": "启航时刻",
+            "location": "天津港",
+            "sceneClass": "scene-port",
+            "description": "量产发货：从工厂到海洋",
+            "date": "2025年11月",
+            "initialDialogue": "start",
+            "scriptFile": "chapter_5.json"
+        },
+        {
+            "id": 6,
+            "title": "跨洋登陆",
+            "location": "美国·洛杉矶仓库",
+            "sceneClass": "scene-warehouse",
+            "description": "海外物流：清关与入库",
+            "date": "2026年1月",
+            "initialDialogue": "start",
+            "scriptFile": "chapter_6.json"
+        },
+        {
+            "id": 7,
+            "title": "门店上架",
+            "location": "加州·经销商门店",
+            "sceneClass": "scene-store",
+            "description": "渠道销售：让用户看见产品",
+            "date": "2026年2月",
+            "initialDialogue": "start",
+            "scriptFile": "chapter_7.json"
+        },
+        {
+            "id": 8,
+            "title": "骑行时刻",
+            "location": "旧金山·金门大桥",
+            "sceneClass": "scene-outdoor",
+            "description": "用户体验：交付价值",
+            "date": "2026年2月",
+            "initialDialogue": "start",
+            "scriptFile": "chapter_8.json"
+        }
+    ]
+}
