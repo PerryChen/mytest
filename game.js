@@ -16,9 +16,10 @@ const TypeWriter = {
   currentText: '',
   currentIndex: 0,
   element: null,
-  intervalId: null,
-  speed: 40,
+  rafId: null,
+  speed: 40, // ms per character
   onComplete: null,
+  _lastCharTime: 0,
 
   start(text, element, onComplete = null) {
     this.stop();
@@ -28,24 +29,38 @@ const TypeWriter = {
     this.onComplete = onComplete;
     this.isTyping = true;
     this.element.textContent = '';
+    this._lastCharTime = 0;
 
-    this.intervalId = setInterval(() => {
-      if (this.currentIndex < this.currentText.length) {
+    const tick = (timestamp) => {
+      if (!this.isTyping) return;
+
+      if (this._lastCharTime === 0) {
+        this._lastCharTime = timestamp;
+      }
+
+      // Advance as many characters as elapsed time allows
+      while (timestamp - this._lastCharTime >= this.speed && this.currentIndex < this.currentText.length) {
         this.element.textContent += this.currentText[this.currentIndex];
         this.currentIndex++;
+        this._lastCharTime += this.speed;
+
         // 播放打字音效 (每2个字符播放一次，避免过于频繁)
         if (this.currentIndex % 2 === 0) {
           if (typeof AudioManager !== 'undefined' && typeof AudioManager.playTyping === 'function') {
             AudioManager.playTyping();
-          } else {
-            // Fallback or debug
-            // console.warn('AudioManager.playTyping not available');
           }
         }
-      } else {
-        this.complete();
       }
-    }, this.speed);
+
+      if (this.currentIndex >= this.currentText.length) {
+        this.complete();
+        return;
+      }
+
+      this.rafId = requestAnimationFrame(tick);
+    };
+
+    this.rafId = requestAnimationFrame(tick);
   },
 
   skip() {
@@ -64,9 +79,9 @@ const TypeWriter = {
   },
 
   stop() {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
     }
   }
 };

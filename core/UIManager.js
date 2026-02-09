@@ -158,44 +158,55 @@ const UIManager = {
      * @private
      */
     _typeWriter(text, element, onComplete) {
-        if (this._typingTimer) clearInterval(this._typingTimer);
+        if (this._rafId) cancelAnimationFrame(this._rafId);
 
         let index = 0;
+        let lastCharTime = 0;
+        const speed = 30; // ms per character
         element.textContent = '';
 
-        // 增加当前打字状态标记，用于跳过
         this.isTyping = true;
         this.currentTypeWriter = {
             text,
             element,
             onComplete,
             skip: () => {
-                clearInterval(this._typingTimer);
+                if (this._rafId) cancelAnimationFrame(this._rafId);
                 element.textContent = text;
                 this.isTyping = false;
                 if (onComplete) onComplete();
             }
         };
 
-        let lastSoundTime = 0; // 初始化上次播放音效的时间
+        let lastSoundTime = 0;
 
-        this._typingTimer = setInterval(() => {
-            if (index < text.length) {
+        const tick = (timestamp) => {
+            if (!this.isTyping) return;
+
+            if (lastCharTime === 0) lastCharTime = timestamp;
+
+            while (timestamp - lastCharTime >= speed && index < text.length) {
                 element.textContent += text[index];
                 index++;
+                lastCharTime += speed;
 
-                // 播放音效 (增加时间节流，避免声音太密集)
                 const now = Date.now();
                 if (now - lastSoundTime > 80 && typeof AudioManager !== 'undefined') {
                     AudioManager.playTyping();
                     lastSoundTime = now;
                 }
-            } else {
-                clearInterval(this._typingTimer);
+            }
+
+            if (index >= text.length) {
                 this.isTyping = false;
                 if (onComplete) onComplete();
+                return;
             }
-        }, 30); // 略微加快打字速度
+
+            this._rafId = requestAnimationFrame(tick);
+        };
+
+        this._rafId = requestAnimationFrame(tick);
     },
 
     /**
