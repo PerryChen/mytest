@@ -59,7 +59,7 @@
     "report_bug": {
         "speaker": "小唯",
         "avatar": "🧑",
-        "text": "老金，现在发现是好事。如果在 DVT 开模后才发现，那才是大灾难。我们如实上报吧。",
+        "text": "现在发现是好事。如果在 DVT 开模后才发现，那才是大灾难。我们如实上报吧。",
         "next": "boss_praise"
     },
     "boss_praise": {

@@ -20,10 +20,8 @@ const ThemeManager = {
         if (savedTheme) {
             document.documentElement.setAttribute('data-theme', savedTheme);
         } else {
-            // Check system preference
-            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                document.documentElement.setAttribute('data-theme', 'dark');
-            }
+            // Default to dark mode
+            document.documentElement.setAttribute('data-theme', 'dark');
         }
     },
 
