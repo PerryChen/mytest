@@ -124,41 +124,56 @@
         </header>
 
         <!-- 关键指标卡片 -->
-        <!-- 关键指标卡片 -->
         <div class="stats-grid"
-            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px;">
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 20px;">
             <div class="stat-card">
-                <div class="stat-label">总浏览量 (PV)</div>
+                <div class="stat-label">总事件 (PV)</div>
                 <div class="stat-value" id="pv-count">0</div>
-                <div style="font-size: 12px; color: var(--text-secondary);">Total Events</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">独立访客 (UV)</div>
                 <div class="stat-value" id="uv-count">0</div>
-                <div style="font-size: 12px; color: var(--text-secondary);">Unique Users</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">启动次数</div>
                 <div class="stat-value" id="launch-count">0</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">通关率 (Pass Rate)</div>
+                <div class="stat-label">主线通关率</div>
                 <div class="stat-value" id="pass-rate">0%</div>
-                <div style="font-size: 12px; color: var(--text-secondary);">Completes / Starts</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">game_complete / launch</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">DLC 启动数</div>
+                <div class="stat-value" id="dlc-start-count">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">DLC 通关率</div>
+                <div class="stat-value" id="dlc-pass-rate">0%</div>
+                <div style="font-size: 12px; color: var(--text-secondary);">dlc_complete / dlc_start</div>
             </div>
         </div>
 
         <!-- 图表区域 -->
         <div class="grid"
             style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-            <!-- 转化漏斗 (占满整行) -->
-            <div class="chart-container" style="grid-column: 1 / -1;">
-                <h3>玩家转化漏斗 (Conversion Funnel)</h3>
+            <!-- 主线漏斗 -->
+            <div class="chart-container">
+                <h3>主线转化漏斗</h3>
                 <canvas id="funnelChart" style="max-height: 300px;"></canvas>
             </div>
+            <!-- DLC 漏斗 -->
             <div class="chart-container">
-                <h3>章节活跃度</h3>
+                <h3>DLC 转化漏斗</h3>
+                <canvas id="dlcFunnelChart" style="max-height: 300px;"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>主线章节活跃度</h3>
                 <canvas id="chapterChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>DLC 章节活跃度</h3>
+                <canvas id="dlcChapterChart"></canvas>
             </div>
             <div class="chart-container">
                 <h3>事件分布</h3>
@@ -189,237 +204,238 @@
     <script src="../core/AnalyticsManager.js"></script>
     <script src="../admin_theme.js"></script>
     <script>
-        // 简单的 Mock 
         const Analytics = AnalyticsManager;
-
-        // 初始化 Analytics (触发 Supabase 连接)
         Analytics.init();
 
+        // ---------- helpers ----------
+        const sid = e => e.session_id || e.sessionId;
+        const isDLCChapter = id => typeof id === 'string' && id.startsWith('dlc_');
+        const dlcChapterLabel = id => {
+            // "dlc_hr_onboarding_3" → "HR-3"
+            const m = String(id).match(/^dlc_(.+?)_(\d+)$/);
+            if (!m) return id;
+            const names = { hr_onboarding: 'HR' };
+            return `${names[m[1]] || m[1]}-${m[2]}`;
+        };
+        const funnelTooltip = {
+            callbacks: {
+                label(ctx) {
+                    const v = ctx.raw;
+                    const prev = ctx.dataIndex > 0 ? ctx.dataset.data[ctx.dataIndex - 1] : v;
+                    const pct = ctx.dataIndex > 0 ? Math.round((v / prev) * 100) : 100;
+                    return `${v} (转化率: ${pct}%)`;
+                }
+            }
+        };
+
+        // ---------- render ----------
         async function renderDashboard() {
-            // 显示加载状态
             const tbody = document.getElementById('event-log-body');
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">Loading data from Supabase...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">Loading...</td></tr>';
 
-            // 获取远程数据
             let data = await Analytics.getRemoteData();
-
-            // 如果没有远程数据（或出错），回退到本地
             if (!data || data.length === 0) {
-                console.log('No remote data, using local fallback');
                 data = Analytics.getLocalData().reverse();
-                document.querySelector('.header p').textContent = 'Local Development Mode (Remote Unavailable)';
+                document.querySelector('.header p').textContent = 'Local Development Mode';
             } else {
-                document.querySelector('.header p').textContent = 'Remote Data Mode (Supabase Connected)';
+                document.querySelector('.header p').textContent = 'Remote Data Mode (Supabase)';
             }
 
-            // 1. 更新卡片
-            // PV: page_view acts (approx by game_launch or just total events, let's use game_launch as session start)
+            // --- KPI cards ---
             const launches = data.filter(e => e.event === 'game_launch').length;
             const uniqueUsers = new Set(data.map(e => e.user_id)).size;
             const gameCompletes = data.filter(e => e.event === 'game_complete').length;
+            const dlcStarts = data.filter(e => e.event === 'dlc_start').length;
+            const dlcCompletes = data.filter(e => e.event === 'dlc_complete').length;
 
-            document.getElementById('pv-count').textContent = data.length; // Total Events
-            document.getElementById('uv-count').textContent = uniqueUsers; // Unique Users
+            document.getElementById('pv-count').textContent = data.length;
+            document.getElementById('uv-count').textContent = uniqueUsers;
             document.getElementById('launch-count').textContent = launches;
+            document.getElementById('pass-rate').textContent = launches > 0 ? ((gameCompletes / launches) * 100).toFixed(1) + '%' : '0%';
+            document.getElementById('dlc-start-count').textContent = dlcStarts;
+            document.getElementById('dlc-pass-rate').textContent = dlcStarts > 0 ? ((dlcCompletes / dlcStarts) * 100).toFixed(1) + '%' : '0%';
 
-            // Pass Rate
-            const passRate = launches > 0 ? ((gameCompletes / launches) * 100).toFixed(1) : 0;
-            document.getElementById('pass-rate').textContent = `${passRate}%`;
-
-
-
-            // 2. 更新表格
+            // --- event log table ---
             tbody.innerHTML = '';
             data.slice(0, 20).forEach(e => {
                 const tr = document.createElement('tr');
                 const ts = e.timestamp || e.client_timestamp;
                 const time = ts ? new Date(ts).toLocaleTimeString() : 'N/A';
-
-                // 格式化详情
                 let details = '';
-                const excludeKeys = ['event', 'sessionId', 'userId', 'timestamp', '_id', 'event_name', 'session_id', 'user_id', 'client_timestamp', 'properties'];
+                const skip = new Set(['event','sessionId','userId','timestamp','_id','event_name','session_id','user_id','client_timestamp','properties']);
                 Object.keys(e).forEach(k => {
-                    if (!excludeKeys.includes(k) && e[k] !== undefined) {
-                        details += `${k}: ${e[k]} | `;
+                    if (!skip.has(k) && e[k] !== undefined) {
+                        const v = Array.isArray(e[k]) ? e[k].join(', ') : e[k];
+                        details += `${k}: ${v} | `;
                     }
                 });
-
-                const fullSessionId = e.sessionId || e.session_id || 'N/A';
+                const fullSid = sid(e) || 'N/A';
                 tr.innerHTML = `
                     <td>${time}</td>
                     <td><span style="font-weight:bold; color:var(--primary)">${e.event}</span></td>
-                    <td style="font-family:monospace; font-size:0.8em">
-                        <span title="${fullSessionId}" style="cursor:help; border-bottom:1px dashed #999;">
-                            ${fullSessionId.substring(0, 12)}...
-                        </span>
-                    </td>
-                    <td style="font-size:0.9em; color:var(--text-secondary); white-space: pre-wrap;">${details}</td>
-                `;
+                    <td style="font-family:monospace;font-size:0.8em"><span title="${fullSid}" style="cursor:help;border-bottom:1px dashed #999">${fullSid.substring(0,12)}...</span></td>
+                    <td style="font-size:0.9em;color:var(--text-secondary);white-space:pre-wrap">${details}</td>`;
                 tbody.appendChild(tr);
             });
 
-            // 3. 渲染图表
             renderCharts(data);
         }
 
-        let chapterChartInst = null;
+        // ---------- charts ----------
+        let chapterChartInst = null, dlcChapterChartInst = null;
         let pieChartInst = null;
-        let funnelChartInst = null;
+        let funnelChartInst = null, dlcFunnelChartInst = null;
 
         function renderCharts(data) {
-            // --- 1. Funnel Data ---
-            // Steps: Launch -> Chapter 1 Start -> Chapter 1 Complete -> Game Complete
-            const uniqueSessions = new Set(data.map(e => e.session_id || e.sessionId));
-            const funnelCounts = {
-                launch: uniqueSessions.size, // Approximation: All unique sessions
-                chap1_start: new Set(data.filter(e => e.event === 'chapter_start' && e.chapter_id == 1).map(e => e.session_id || e.sessionId)).size,
-                chap1_end: new Set(data.filter(e => e.event === 'chapter_complete' && e.chapter_id == 1).map(e => e.session_id || e.sessionId)).size,
-                game_end: new Set(data.filter(e => e.event === 'game_complete').map(e => e.session_id || e.sessionId)).size
+            // === 1. Main funnel ===
+            const mainFunnel = {
+                launch: new Set(data.filter(e => e.event === 'game_launch').map(sid)).size,
+                ch1_start: new Set(data.filter(e => e.event === 'chapter_start' && e.chapter_id == 1).map(sid)).size,
+                ch1_end: new Set(data.filter(e => e.event === 'chapter_complete' && e.chapter_id == 1).map(sid)).size,
+                complete: new Set(data.filter(e => e.event === 'game_complete').map(sid)).size
             };
-
-            const ctxFunnel = document.getElementById('funnelChart').getContext('2d');
+            const ctxF = document.getElementById('funnelChart').getContext('2d');
             if (funnelChartInst) funnelChartInst.destroy();
-
-            funnelChartInst = new Chart(ctxFunnel, {
+            funnelChartInst = new Chart(ctxF, {
                 type: 'bar',
                 data: {
-                    labels: ['游戏启动 (Launch)', '开始第1章', '完成第1章', '通关 (Game Complete)'],
-                    datasets: [{
-                        label: '用户数',
-                        data: [
-                            funnelCounts.launch,
-                            funnelCounts.chap1_start,
-                            funnelCounts.chap1_end,
-                            funnelCounts.game_end
-                        ],
-                        backgroundColor: ['#3498db', '#2980b9', '#8e44ad', '#27ae60'],
-                        barPercentage: 0.6
-                    }]
+                    labels: ['启动', '开始第1章', '完成第1章', '主线通关'],
+                    datasets: [{ label: '用户数', data: Object.values(mainFunnel), backgroundColor: ['#3498db','#2980b9','#8e44ad','#27ae60'], barPercentage: 0.6 }]
                 },
-                options: {
-                    indexAxis: 'y', // Horizontal bar chart acting as funnel
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    const value = context.raw;
-                                    const prevValue = context.dataIndex > 0 ? context.dataset.data[context.dataIndex - 1] : value;
-                                    const conversion = context.dataIndex > 0 ? Math.round((value / prevValue) * 100) : 100;
-                                    return `${value} (转化率: ${conversion}%)`;
-                                }
-                            }
-                        }
-                    }
-                }
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: funnelTooltip } }
             });
 
-            // --- 2. Chapter Data ---
-            // 准备数据：章节开始 vs 完成
-            const chapterStarts = {};
-            const chapterEnds = {};
+            // === 2. DLC funnel ===
+            const dlcFunnel = {
+                start: new Set(data.filter(e => e.event === 'dlc_start').map(sid)).size,
+                ch1_start: new Set(data.filter(e => e.event === 'dlc_chapter_start' && e.chapter_index === 0).map(sid)).size,
+                ch1_end: new Set(data.filter(e => e.event === 'chapter_complete' && isDLCChapter(e.chapter_id)).map(sid)).size,
+                complete: new Set(data.filter(e => e.event === 'dlc_complete').map(sid)).size
+            };
+            const ctxDF = document.getElementById('dlcFunnelChart').getContext('2d');
+            if (dlcFunnelChartInst) dlcFunnelChartInst.destroy();
+            dlcFunnelChartInst = new Chart(ctxDF, {
+                type: 'bar',
+                data: {
+                    labels: ['DLC 启动', '开始第1章', '完成任意章', 'DLC 通关'],
+                    datasets: [{ label: '用户数', data: Object.values(dlcFunnel), backgroundColor: ['#e67e22','#d35400','#c0392b','#16a085'], barPercentage: 0.6 }]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: funnelTooltip } }
+            });
 
+            // === 3. Main chapter activity ===
+            const mainStarts = {}, mainEnds = {};
             data.forEach(e => {
                 const cid = e.chapter_id;
-                if (e.event === 'chapter_start' && cid) chapterStarts[cid] = (chapterStarts[cid] || 0) + 1;
-                if (e.event === 'chapter_complete' && cid) chapterEnds[cid] = (chapterEnds[cid] || 0) + 1;
+                if (!cid || isDLCChapter(cid)) return;
+                if (e.event === 'chapter_start') mainStarts[cid] = (mainStarts[cid] || 0) + 1;
+                if (e.event === 'chapter_complete') mainEnds[cid] = (mainEnds[cid] || 0) + 1;
             });
-
-            const chapters = Object.keys({ ...chapterStarts, ...chapterEnds }).sort((a, b) => a - b);
-
-            // 渲染柱状图
+            const mainChs = Object.keys({ ...mainStarts, ...mainEnds }).sort((a, b) => a - b);
             const ctx1 = document.getElementById('chapterChart').getContext('2d');
             if (chapterChartInst) chapterChartInst.destroy();
-
             chapterChartInst = new Chart(ctx1, {
                 type: 'bar',
                 data: {
-                    labels: chapters.map(c => `第${c}章`),
+                    labels: mainChs.map(c => `第${c}章`),
                     datasets: [
-                        { label: '开始', data: chapters.map(c => chapterStarts[c] || 0), backgroundColor: '#36A2EB' },
-                        { label: '完成', data: chapters.map(c => chapterEnds[c] || 0), backgroundColor: '#4BC0C0' }
+                        { label: '开始', data: mainChs.map(c => mainStarts[c] || 0), backgroundColor: '#36A2EB' },
+                        { label: '完成', data: mainChs.map(c => mainEnds[c] || 0), backgroundColor: '#4BC0C0' }
                     ]
                 },
                 options: { responsive: true, maintainAspectRatio: false }
             });
 
-            // 渲染饼图：事件分布
-            const eventCounts = {};
+            // === 4. DLC chapter activity ===
+            const dlcStarts = {}, dlcEnds = {};
             data.forEach(e => {
-                eventCounts[e.event] = (eventCounts[e.event] || 0) + 1;
+                const cid = e.chapter_id;
+                if (e.event === 'dlc_chapter_start' && cid) dlcStarts[cid] = (dlcStarts[cid] || 0) + 1;
+                if (e.event === 'chapter_complete' && isDLCChapter(cid)) dlcEnds[cid] = (dlcEnds[cid] || 0) + 1;
+            });
+            const dlcChs = Object.keys({ ...dlcStarts, ...dlcEnds }).sort();
+            const ctx3 = document.getElementById('dlcChapterChart').getContext('2d');
+            if (dlcChapterChartInst) dlcChapterChartInst.destroy();
+            dlcChapterChartInst = new Chart(ctx3, {
+                type: 'bar',
+                data: {
+                    labels: dlcChs.map(dlcChapterLabel),
+                    datasets: [
+                        { label: '开始', data: dlcChs.map(c => dlcStarts[c] || 0), backgroundColor: '#e67e22' },
+                        { label: '完成', data: dlcChs.map(c => dlcEnds[c] || 0), backgroundColor: '#16a085' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
             });
 
+            // === 5. Event distribution pie ===
+            const eventCounts = {};
+            data.forEach(e => { eventCounts[e.event] = (eventCounts[e.event] || 0) + 1; });
             const ctx2 = document.getElementById('eventPieChart').getContext('2d');
             if (pieChartInst) pieChartInst.destroy();
-
             pieChartInst = new Chart(ctx2, {
                 type: 'doughnut',
                 data: {
                     labels: Object.keys(eventCounts),
-                    datasets: [{
-                        data: Object.values(eventCounts),
-                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
-                    }]
+                    datasets: [{ data: Object.values(eventCounts), backgroundColor: ['#FF6384','#36A2EB','#FFCE56','#4BC0C0','#9966FF','#e67e22','#1abc9c','#e74c3c','#95a5a6'] }]
                 },
                 options: { responsive: true, maintainAspectRatio: false }
             });
         }
 
-
-
+        // ---------- simulate ----------
         function simulateData() {
             const mockEvents = [];
-            const numPlayers = 10; // Simulate 10 players
+            const numPlayers = 10;
 
             for (let p = 0; p < numPlayers; p++) {
                 const sessionId = `sess_${p}_${Date.now()}`;
                 const userId = `user_00${p % 5 + 1}`;
-                const baseTime = Date.now() - Math.floor(Math.random() * 86400000); // Within last 24 hours
+                const baseTime = Date.now() - Math.floor(Math.random() * 86400000);
 
-                // Each player goes through a journey with decreasing probability of continuing
-                // Launch: 100%
-                mockEvents.push({
-                    event: 'game_launch', event_name: 'game_launch',
-                    user_id: userId, session_id: sessionId,
-                    timestamp: baseTime, chapter_id: 0
-                });
+                // -- Main game journey --
+                mockEvents.push({ event: 'game_launch', event_name: 'game_launch', user_id: userId, session_id: sessionId, timestamp: baseTime });
 
-                // Chapter 1 Start: 90%
                 if (Math.random() < 0.9) {
-                    mockEvents.push({
-                        event: 'chapter_start', event_name: 'chapter_start',
-                        user_id: userId, session_id: sessionId,
-                        timestamp: baseTime + 5000, chapter_id: 1
-                    });
-
-                    // Chapter 1 Complete: 70%
+                    mockEvents.push({ event: 'chapter_start', event_name: 'chapter_start', user_id: userId, session_id: sessionId, timestamp: baseTime + 5000, chapter_id: 1 });
                     if (Math.random() < 0.7) {
-                        mockEvents.push({
-                            event: 'chapter_complete', event_name: 'chapter_complete',
-                            user_id: userId, session_id: sessionId,
-                            timestamp: baseTime + 60000, chapter_id: 1
-                        });
-
-                        // Game Complete: 40%
+                        mockEvents.push({ event: 'chapter_complete', event_name: 'chapter_complete', user_id: userId, session_id: sessionId, timestamp: baseTime + 60000, chapter_id: 1 });
                         if (Math.random() < 0.4) {
-                            mockEvents.push({
-                                event: 'game_complete', event_name: 'game_complete',
-                                user_id: userId, session_id: sessionId,
-                                timestamp: baseTime + 300000, chapter_id: 8, score: Math.floor(Math.random() * 100)
-                            });
+                            mockEvents.push({ event: 'game_complete', event_name: 'game_complete', user_id: userId, session_id: sessionId, timestamp: baseTime + 300000, score: 400 + Math.floor(Math.random() * 400) });
                         }
+                    }
+                }
+
+                // -- DLC journey (60% of players try DLC) --
+                if (Math.random() < 0.6) {
+                    const dlcBase = baseTime + 400000;
+                    mockEvents.push({ event: 'dlc_start', event_name: 'dlc_start', user_id: userId, session_id: sessionId, timestamp: dlcBase, dlc_id: 'hr_onboarding' });
+
+                    const dlcChapters = 6;
+                    let survived = true;
+                    for (let c = 1; c <= dlcChapters && survived; c++) {
+                        const chId = `dlc_hr_onboarding_${c}`;
+                        mockEvents.push({ event: 'dlc_chapter_start', event_name: 'dlc_chapter_start', user_id: userId, session_id: sessionId, timestamp: dlcBase + c * 30000, dlc_id: 'hr_onboarding', chapter_id: chId, chapter_index: c - 1 });
+
+                        if (Math.random() < 0.8) {
+                            const chScore = Math.random() < 0.6 ? (c <= 2 || c >= 5 ? 200 : 300) : 100;
+                            mockEvents.push({ event: 'chapter_complete', event_name: 'chapter_complete', user_id: userId, session_id: sessionId, timestamp: dlcBase + c * 30000 + 20000, chapter_id: chId, dlc_id: 'hr_onboarding', chapter_score: chScore });
+                        } else {
+                            survived = false;
+                        }
+                    }
+
+                    if (survived) {
+                        const totalScore = 800 + Math.floor(Math.random() * 800);
+                        const achs = totalScore >= 1600 ? ['培训之星','知识达人','品牌大使','价值观标兵','入职达人','彩蛋猎人'] : totalScore >= 1200 ? ['知识达人','品牌大使'] : ['知识达人'];
+                        mockEvents.push({ event: 'dlc_complete', event_name: 'dlc_complete', user_id: userId, session_id: sessionId, timestamp: dlcBase + 250000, dlc_id: 'hr_onboarding', score: totalScore, unlocked_cards: Math.min(8, 4 + Math.floor(Math.random() * 5)), total_cards: 8, achievements: achs });
                     }
                 }
             }
 
-            // Save to local storage
             localStorage.setItem('velotric_analytics_local', JSON.stringify(mockEvents));
-
-            // Reload
             renderDashboard();
-            alert(`已模拟 ${numPlayers} 个玩家的游戏流程！(共 ${mockEvents.length} 条事件)`);
+            alert(`已模拟 ${numPlayers} 个玩家（主线 + DLC）！共 ${mockEvents.length} 条事件`);
         }
 
         function clearData() {
