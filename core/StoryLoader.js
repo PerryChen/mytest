@@ -20,7 +20,7 @@ const StoryLoader = {
         }
 
         try {
-            const response = await fetch('data/chapters.json');
+            const response = await fetch('data/chapters.json', { cache: 'no-cache' });
             if (!response.ok) throw new Error('Failed to load chapters.json');
             const data = await response.json();
             this.cache.chapters = data;
@@ -42,7 +42,7 @@ const StoryLoader = {
         }
 
         try {
-            const response = await fetch('data/knowledgeCards.json');
+            const response = await fetch('data/knowledgeCards.json', { cache: 'no-cache' });
             if (!response.ok) throw new Error('Failed to load knowledgeCards.json');
             const data = await response.json();
             this.cache.knowledgeCards = data;
@@ -65,7 +65,7 @@ const StoryLoader = {
         }
 
         try {
-            const response = await fetch(`data/scripts/chapter_${chapterId}.json`);
+            const response = await fetch(`data/scripts/chapter_${chapterId}.json`, { cache: 'no-cache' });
             if (!response.ok) throw new Error(`Failed to load chapter_${chapterId}.json`);
             const data = await response.json();
             this.cache.scripts[chapterId] = data;

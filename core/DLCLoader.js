@@ -13,7 +13,7 @@ const DLCLoader = {
      */
     async loadManifest(dlcId) {
         try {
-            const response = await fetch(`data/dlcs/${dlcId}/manifest.json`);
+            const response = await fetch(`data/dlcs/${dlcId}/manifest.json`, { cache: 'no-cache' });
             if (!response.ok) throw new Error(`Failed to load DLC: ${dlcId}`);
             const manifest = await response.json();
             this.loadedDLCs[dlcId] = manifest;
@@ -33,7 +33,7 @@ const DLCLoader = {
      */
     async loadScript(dlcId, scriptFile) {
         try {
-            const response = await fetch(`data/dlcs/${dlcId}/${scriptFile}`);
+            const response = await fetch(`data/dlcs/${dlcId}/${scriptFile}`, { cache: 'no-cache' });
             if (!response.ok) throw new Error(`Failed to load script: ${scriptFile}`);
             return await response.json();
         } catch (error) {
