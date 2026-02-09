@@ -195,19 +195,30 @@ const Game = {
       return;
     }
 
-    // 处理 DLC 章节完成
+    // 处理章节完成
     if (node.event === 'chapter_complete') {
+      const chapterId = GameState.currentChapterId;
+      // 记录已完成章节
+      if (!GameEngine.state.completedChapters.includes(chapterId)) {
+        GameEngine.state.completedChapters.push(chapterId);
+        GameEngine.saveGame();
+      }
       if (typeof AnalyticsManager !== 'undefined') {
-        AnalyticsManager.trackEvent('chapter_complete', { chapter_id: GameState.currentChapterId });
+        AnalyticsManager.trackEvent('chapter_complete', { chapter_id: chapterId });
       }
       if (this.currentDLC) {
         this.playDLCChapter(this.dlcChapterIndex + 1);
       } else {
-        UI.showChapterComplete(GameState.currentChapterId);
+        UI.showChapterComplete(chapterId);
       }
       return;
     }
     if (node.event === 'game_complete') {
+      // 记录最后一章完成
+      const chapterId = GameState.currentChapterId;
+      if (!GameEngine.state.completedChapters.includes(chapterId)) {
+        GameEngine.state.completedChapters.push(chapterId);
+      }
       if (typeof AnalyticsManager !== 'undefined') {
         AnalyticsManager.trackEvent('game_complete', {
           score: GameState.score,
@@ -219,6 +230,8 @@ const Game = {
         this.currentDLC = null;
         UI.switchScreen('intro');
       } else {
+        // 通关后显示章节选择按钮
+        document.getElementById('chapter-select-btn').style.display = 'flex';
         UI.showEnding();
       }
       return;
