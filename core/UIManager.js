@@ -3,13 +3,20 @@
 // ==========================================
 
 /**
- * UIManager - 视图层管理器
+ * UIManager - 视图层管理器（统一版）
  * 负责所有 UI 元素的渲染和交互
- * NOTE: 从 game.js 中的 UI 对象迁移而来
+ * v2.1: 合并 game.js 中的 UI 对象，作为唯一 UI 层
  */
 const UIManager = {
     // 缓存的 DOM 元素引用
     elements: null,
+
+    // 顶层快捷引用（兼容 game.js 中 UI.screens / UI.dialog / UI.popup 等写法）
+    screens: null,
+    gameHeader: null,
+    scene: null,
+    dialog: null,
+    popup: null,
 
     /**
      * 初始化 UI 管理器
@@ -18,6 +25,11 @@ const UIManager = {
         // 缓存 DOM 元素
         this.elements = {
             screens: {
+                intro: document.getElementById('intro-screen'),
+                game: document.getElementById('game-screen'),
+                transition: document.getElementById('transition-screen'),
+                complete: document.getElementById('chapter-complete-screen'),
+                ending: document.getElementById('ending-screen'),
                 cards: document.getElementById('cards-screen')
             },
             header: {
@@ -46,6 +58,18 @@ const UIManager = {
             }
         };
 
+        // 兼容顶层引用
+        this.screens = this.elements.screens;
+        this.gameHeader = this.elements.header;
+        this.scene = this.elements.scene;
+        this.dialog = this.elements.dialog;
+        this.popup = this.elements.popup;
+
+        // 初始化 Analytics
+        if (typeof AnalyticsManager !== 'undefined') {
+            AnalyticsManager.init();
+        }
+
         // 尝试自动解锁 AudioContext
         const unlockAudio = () => {
             if (typeof AudioManager !== 'undefined' && AudioManager.audioContext) {
@@ -59,19 +83,58 @@ const UIManager = {
         document.addEventListener('click', unlockAudio);
         document.addEventListener('touchstart', unlockAudio);
 
-        // 绑定地图按钮事件
-        const mapBtn = document.getElementById('map-btn');
-        if (mapBtn) {
-            mapBtn.addEventListener('click', () => {
-                console.log('[UIManager] Map button clicked');
-                if (typeof Game !== 'undefined' && Game.showMap) {
-                    Game.showMap();
-                } else {
-                    console.error('[UIManager] Game.showMap not found');
-                }
-            });
+        // ===== 事件绑定 =====
+        document.getElementById('new-game-btn').addEventListener('click', () => Game.startNewGame());
+        document.getElementById('continue-game-btn').addEventListener('click', () => Game.continueGame());
+        document.querySelector('.dialog-box').addEventListener('click', () => Game.advanceDialogue());
+        document.getElementById('next-chapter-btn').addEventListener('click', () => Game.startChapter(GameState.currentChapterId + 1));
+        document.getElementById('review-chapter-btn').addEventListener('click', () => Game.reviewCurrentChapter());
+
+        this.popup.closeBtn.addEventListener('click', () => {
+            this.popup.container.style.display = 'none';
+            if (Game.pendingDialogueNode) {
+                const node = Game.pendingDialogueNode;
+                Game.pendingDialogueNode = null;
+                this.renderDialogue(node);
+                Game.isWaitingChoice = (node.choices && node.choices.length > 0);
+            } else {
+                Game.advanceDialogue();
+            }
+        });
+
+        document.getElementById('play-again-btn').addEventListener('click', () => Game.startNewGame());
+        document.getElementById('view-cards-btn').addEventListener('click', () => Game.showCardsScreen());
+        document.getElementById('cards-back-btn').addEventListener('click', () => Game.goBackToEndingOrMenu());
+
+        if (GameEngine.loadSaveData()) {
+            document.getElementById('continue-game-btn').style.display = 'flex';
         }
 
+        document.getElementById('confirm-name-btn').addEventListener('click', () => this.confirmPlayerName());
+        document.getElementById('player-name-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.confirmPlayerName();
+        });
+
+        const downloadBtn = document.getElementById('download-cert-btn');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', () => this.downloadCertificate());
+        }
+
+        document.getElementById('chapter-select-btn').addEventListener('click', () => this.showChapterSelector());
+        document.getElementById('close-chapter-select-btn').addEventListener('click', () => {
+            document.getElementById('chapter-select-modal').style.display = 'none';
+        });
+
+        document.getElementById('sound-toggle-btn').addEventListener('click', () => AudioManager.toggleSound());
+
+        // DLC Demo 按钮
+        document.getElementById('dlc-demo-btn').addEventListener('click', () => Game.startDLC('gtm_demo'));
+
+        // 地图按钮
+        const mapBtn = document.getElementById('map-btn');
+        if (mapBtn) {
+            mapBtn.addEventListener('click', () => this.showMap());
+        }
         const closeMapBtn = document.getElementById('close-map-btn');
         if (closeMapBtn) {
             closeMapBtn.addEventListener('click', () => {
@@ -79,253 +142,160 @@ const UIManager = {
             });
         }
 
+        // 海报生成按钮
+        const generatePosterBtn = document.getElementById('generate-poster-btn');
+        if (generatePosterBtn) {
+            generatePosterBtn.addEventListener('click', () => this.showPosterModal());
+        }
+        const closePosterBtn = document.getElementById('close-poster-btn');
+        if (closePosterBtn) {
+            closePosterBtn.addEventListener('click', () => {
+                document.getElementById('poster-modal').style.display = 'none';
+            });
+        }
+        const downloadPosterBtn = document.getElementById('download-poster-btn');
+        if (downloadPosterBtn) {
+            downloadPosterBtn.addEventListener('click', () => this.downloadPoster());
+        }
+        const copyPosterBtn = document.getElementById('copy-poster-btn');
+        if (copyPosterBtn) {
+            copyPosterBtn.addEventListener('click', () => this.copyPosterToClipboard());
+        }
+
+        if (GameState.hasCompleted) {
+            document.getElementById('chapter-select-btn').style.display = 'flex';
+        }
+
         console.log('[UIManager] Ready');
     },
 
-    /**
-     * 切换屏幕
-     * @param {string} screenName - 屏幕名称
-     */
+    // ===== 屏幕切换 =====
+
     switchScreen(screenName) {
-        Object.values(this.elements.screens).forEach(s => s.classList.remove('active'));
-        this.elements.screens[screenName].classList.add('active');
+        Object.values(this.screens).forEach(s => s.classList.remove('active'));
+        this.screens[screenName].classList.add('active');
     },
 
-    /**
-     * 更新场景信息
-     * @param {Object} chapter - 章节对象
-     */
+    // ===== 场景更新 =====
+
     updateScene(chapter) {
-        const { header, scene } = this.elements;
+        this.gameHeader.badge.textContent = `第${chapter.id}章`;
+        this.gameHeader.title.textContent = chapter.title;
+        this.gameHeader.location.textContent = chapter.location;
 
-        header.badge.textContent = `第${chapter.id}章`;
-        header.title.textContent = chapter.title;
-        header.location.textContent = chapter.location;
-
-        // 日期更新动画
-        const oldDate = header.date.textContent;
+        const oldDate = this.gameHeader.date.textContent;
         if (oldDate !== chapter.date) {
-            header.date.textContent = chapter.date;
-            header.date.classList.remove('date-change');
-            void header.date.offsetWidth; // 强制重绘
-            header.date.classList.add('date-change');
+            this.gameHeader.date.textContent = chapter.date;
+            this.gameHeader.date.classList.remove('date-change');
+            void this.gameHeader.date.offsetWidth;
+            this.gameHeader.date.classList.add('date-change');
         }
 
-        // 更新进度条
         const totalChapters = StoryLoader.cache.chapters?.chapters?.length || 8;
         const progress = (chapter.id / totalChapters) * 100;
         document.getElementById('progress-text').textContent = `${chapter.id} / ${totalChapters}`;
         document.getElementById('progress-fill').style.width = `${progress}%`;
-
-        // 更新背景
-        scene.bg.className = `scene-background ${chapter.sceneClass}`;
+        this.scene.bg.className = `scene-background ${chapter.sceneClass}`;
     },
 
-    /**
-     * 渲染对话节点
-     * @param {Object} node - 对话节点
-     * @param {Function} onChoiceMade - 选择回调
-     */
-    renderDialogue(node, onChoiceMade) {
-        const { dialog, scene } = this.elements;
+    // ===== 对话渲染 =====
 
-        dialog.name.textContent = node.speaker;
-        dialog.avatar.textContent = node.avatar;
+    renderDialogue(node) {
+        try {
+            this.dialog.name.textContent = node.speaker || '???';
+            this.dialog.avatar.textContent = node.avatar || '👤';
+        } catch (error) {
+            console.error('[UIManager] Render error:', error);
+            this.dialog.name.textContent = '???';
+            this.dialog.avatar.textContent = '👤';
+        }
 
-        // 角色立绘
-        scene.characterArea.innerHTML = '';
+        const charArea = this.scene.characterArea;
+        charArea.innerHTML = '';
         const charDiv = document.createElement('div');
         charDiv.className = 'character speaking';
-        charDiv.innerHTML = `<div class="character-avatar">${node.avatar}</div>`;
-        scene.characterArea.appendChild(charDiv);
+        charDiv.innerHTML = `<div class="character-avatar">${node.avatar || '👤'}</div>`;
+        charArea.appendChild(charDiv);
 
-        // 清空选项
-        dialog.choices.innerHTML = '';
-        dialog.choices.style.display = 'none';
-        dialog.indicator.style.display = 'none';
+        const choicesContainer = this.dialog.choices;
+        choicesContainer.innerHTML = '';
+        choicesContainer.style.display = 'none';
+        this.dialog.indicator.style.display = 'none';
 
-        // 打字机效果
-        this._typeWriter(node.text, dialog.text, () => {
-            dialog.indicator.style.display = 'block';
+        TypeWriter.start(node.text || '', this.dialog.text, () => {
             if (node.choices && node.choices.length > 0) {
-                this._renderChoices(node.choices, onChoiceMade);
+                choicesContainer.style.display = 'flex';
+                node.choices.forEach((choice, index) => {
+                    const btn = document.createElement('div');
+                    btn.className = 'choice-btn choice-slide-in';
+                    btn.style.pointerEvents = 'none';
+                    btn.style.animationDelay = `${index * 100}ms`;
+                    btn.innerHTML = `<div class="choice-letter">${String.fromCharCode(65 + index)}</div>${choice.text}`;
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        Game.makeChoice(choice, btn);
+                    };
+                    choicesContainer.appendChild(btn);
+                });
+                setTimeout(() => {
+                    choicesContainer.querySelectorAll('.choice-btn').forEach(btn => {
+                        btn.style.pointerEvents = 'auto';
+                    });
+                }, 500);
+            } else {
+                this.dialog.indicator.style.display = 'block';
             }
         });
     },
 
-    /**
-     * 内部打字机实现
-     * @private
-     */
-    _typeWriter(text, element, onComplete) {
-        if (this._rafId) cancelAnimationFrame(this._rafId);
+    // ===== 知识卡片 =====
 
-        let index = 0;
-        let lastCharTime = 0;
-        const speed = 30; // ms per character
-        element.textContent = '';
-
-        this.isTyping = true;
-        this.currentTypeWriter = {
-            text,
-            element,
-            onComplete,
-            skip: () => {
-                if (this._rafId) cancelAnimationFrame(this._rafId);
-                element.textContent = text;
-                this.isTyping = false;
-                if (onComplete) onComplete();
-            }
-        };
-
-        let lastSoundTime = 0;
-
-        const tick = (timestamp) => {
-            if (!this.isTyping) return;
-
-            if (lastCharTime === 0) lastCharTime = timestamp;
-
-            while (timestamp - lastCharTime >= speed && index < text.length) {
-                element.textContent += text[index];
-                index++;
-                lastCharTime += speed;
-
-                const now = Date.now();
-                if (now - lastSoundTime > 80 && typeof AudioManager !== 'undefined') {
-                    AudioManager.playTyping();
-                    lastSoundTime = now;
-                }
-            }
-
-            if (index >= text.length) {
-                this.isTyping = false;
-                if (onComplete) onComplete();
-                return;
-            }
-
-            this._rafId = requestAnimationFrame(tick);
-        };
-
-        this._rafId = requestAnimationFrame(tick);
-    },
-
-    /**
-     * 跳过打字
-     */
-    skipTyping() {
-        if (this.isTyping && this.currentTypeWriter) {
-            this.currentTypeWriter.skip();
-            return true;
-        }
-        return false;
-    },
-
-    /**
-     * 渲染选项按钮
-     * @private
-     */
-    _renderChoices(choices, onChoiceMade) {
-        const container = this.elements.dialog.choices;
-        container.style.display = 'flex';
-
-        choices.forEach((choice, index) => {
-            const btn = document.createElement('div');
-            btn.className = 'choice-btn choice-slide-in';
-            btn.style.pointerEvents = 'none';
-            btn.style.animationDelay = `${index * 100}ms`;
-            btn.innerHTML = `<div class="choice-letter">${String.fromCharCode(65 + index)}</div>${choice.text}`;
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                if (onChoiceMade) onChoiceMade(choice, btn);
-            };
-            container.appendChild(btn);
-        });
-
-        // 延迟启用点击（移动端优化）
-        setTimeout(() => {
-            container.querySelectorAll('.choice-btn').forEach(btn => {
-                btn.style.pointerEvents = 'auto';
-            });
-        }, 500);
-    },
-
-    /**
-     * 显示知识卡弹窗
-     * @param {string} cardId - 卡片 ID
-     */
     showKnowledgeCard(cardId) {
         const card = StoryLoader.getKnowledgeCard(cardId);
         if (!card) {
             console.warn('[UIManager] Card not found:', cardId);
             return;
         }
-
-        const { popup } = this.elements;
-        popup.title.textContent = card.title;
-        popup.content.textContent = card.content;
-        popup.container.style.display = 'flex';
+        this.popup.title.textContent = card.title;
+        this.popup.content.textContent = card.content;
+        this.popup.container.style.display = 'flex';
     },
 
-    /**
-     * 隐藏知识卡弹窗
-     */
     hideKnowledgeCard() {
-        this.elements.popup.container.style.display = 'none';
+        this.popup.container.style.display = 'none';
     },
 
-    /**
-     * 显示章节过渡画面
-     * @param {Object} chapter - 章节对象
-     * @param {Function} callback - 完成回调
-     */
+    // ===== 过渡画面 =====
+
     showTransition(chapter, callback) {
         this.switchScreen('transition');
-
         document.getElementById('transition-chapter').textContent = `第${chapter.id}章`;
         document.getElementById('transition-title').textContent = chapter.title;
         document.getElementById('transition-location').textContent = `📍 ${chapter.location}`;
-
-        setTimeout(() => {
-            if (callback) callback();
-        }, 2000);
+        setTimeout(() => callback(), 2000);
     },
 
-    /**
-     * 显示章节完成画面
-     * @param {number} chapterId - 章节 ID
-     * @param {number} score - 当前分数
-     */
-    showChapterComplete(chapterId, score) {
-        this.switchScreen('complete');
-        if (typeof AudioManager !== 'undefined') {
-            AudioManager.playComplete();
-        }
+    // ===== 章节完成 =====
 
+    showChapterComplete(chapterId) {
+        this.switchScreen('complete');
+        AudioManager.playComplete();
         const chapter = StoryLoader.getChapter(chapterId);
         document.getElementById('complete-chapter-name').textContent = `第${chapter.id}章：${chapter.title}`;
-        document.getElementById('chapter-score').textContent = score;
+        document.getElementById('chapter-score').textContent = GameState.score;
         document.getElementById('decisions-count').textContent = '1';
-
-        // 显示本章获得的知识卡
         this._renderChapterCards(chapterId);
     },
 
-    /**
-     * 渲染章节知识卡
-     * @private
-     */
     async _renderChapterCards(chapterId) {
         const cardsContainer = document.getElementById('cards-earned');
         cardsContainer.innerHTML = '';
-
         try {
             const script = await StoryLoader.loadChapterScript(chapterId);
             const cardsInChapter = new Set();
-
             Object.values(script).forEach(node => {
                 if (node.unlockCard) cardsInChapter.add(node.unlockCard);
             });
-
             cardsInChapter.forEach(cardId => {
                 const card = StoryLoader.getKnowledgeCard(cardId);
                 if (card) {
@@ -340,19 +310,261 @@ const UIManager = {
         }
     },
 
-    /**
-     * 显示游戏结束画面
-     * @param {number} score - 总分
-     * @param {number} cardCount - 解锁卡片数
-     */
-    showEnding(score, cardCount) {
+    // ===== 结局画面 =====
+
+    showEnding() {
         this.switchScreen('ending');
-        if (typeof AudioManager !== 'undefined') {
-            AudioManager.playEnding();
+        AudioManager.playEnding();
+        document.getElementById('total-score').textContent = GameState.score;
+        document.getElementById('total-cards').textContent = GameState.unlockedCards.length;
+
+        if (GameState.gameStartTime) {
+            GameState.completionTime = Date.now() - GameState.gameStartTime;
+        }
+        GameState.save();
+
+        this.checkAndShowAchievements();
+    },
+
+    checkAndShowAchievements() {
+        const achievements = [];
+        if (GameState.score >= 800) achievements.push({ icon: '🏆', name: '完美决策者', desc: '获得800分以上' });
+        if (GameState.unlockedCards.length >= 8) achievements.push({ icon: '📚', name: '知识收藏家', desc: '解锁全部知识卡' });
+        if (GameState.completionTime && GameState.completionTime < 600000) {
+            achievements.push({ icon: '⚡', name: '速通达人', desc: '10分钟内通关' });
         }
 
-        document.getElementById('total-score').textContent = score;
-        document.getElementById('total-cards').textContent = cardCount;
+        const container = document.getElementById('achievements-container');
+        if (container) {
+            container.innerHTML = '';
+            if (achievements.length > 0) {
+                container.style.display = 'block';
+                achievements.forEach(ach => {
+                    const el = document.createElement('div');
+                    el.className = 'achievement-item';
+                    el.innerHTML = `<span class="achievement-icon">${ach.icon}</span><div><div class="achievement-name">${ach.name}</div><div class="achievement-desc">${ach.desc}</div></div>`;
+                    container.appendChild(el);
+                });
+            }
+        }
+    },
+
+    // ===== 玩家姓名确认 =====
+
+    confirmPlayerName() {
+        const nameInput = document.getElementById('player-name-input');
+        const playerName = nameInput.value.trim();
+        if (!playerName) {
+            nameInput.focus();
+            nameInput.style.borderColor = '#ff6b6b';
+            setTimeout(() => nameInput.style.borderColor = '', 1000);
+            return;
+        }
+        document.getElementById('name-input-section').style.display = 'none';
+        document.getElementById('certificate').style.display = 'block';
+        document.getElementById('cert-player-name').textContent = playerName;
+        const now = new Date();
+        document.getElementById('cert-date').textContent = `通关日期：${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
+        localStorage.setItem('velotric_player_name', playerName);
+    },
+
+    // ===== 证书下载 =====
+
+    downloadCertificate() {
+        const container = document.getElementById('certificate');
+        const btn = document.getElementById('download-cert-btn');
+        if (!container || !btn) return;
+
+        const btnContainer = btn.parentNode;
+        const originalDisplay = btnContainer.style.display;
+        btnContainer.style.display = 'none';
+
+        html2canvas(container, { backgroundColor: null, scale: 2 }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `Velotric_Certificate_${new Date().getTime()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            btnContainer.style.display = originalDisplay;
+        }).catch(err => {
+            console.error('证书生成失败:', err);
+            btnContainer.style.display = originalDisplay;
+        });
+    },
+
+    // ===== 海报功能 =====
+
+    showPosterModal() {
+        const modal = document.getElementById('poster-modal');
+        if (!modal) return;
+
+        const playerName = GameEngine.state.playerName || '勇敢的探索者';
+        document.getElementById('poster-player-name').textContent = playerName;
+        document.getElementById('poster-score').textContent = GameState.score;
+        document.getElementById('poster-cards').textContent = GameState.unlockedCards.length;
+        document.getElementById('poster-chapters').textContent = GameState.completedChapters.length || 8;
+        document.getElementById('poster-date').textContent = new Date().toLocaleDateString('zh-CN');
+
+        modal.style.display = 'flex';
+    },
+
+    downloadPoster() {
+        const posterCard = document.getElementById('poster-card');
+        if (!posterCard) return;
+
+        html2canvas(posterCard, {
+            backgroundColor: null,
+            scale: 2,
+            useCORS: true
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `Velotric_Poster_${new Date().getTime()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }).catch(err => {
+            console.error('海报生成失败:', err);
+            alert('海报生成失败，请重试');
+        });
+    },
+
+    async copyPosterToClipboard() {
+        const posterCard = document.getElementById('poster-card');
+        if (!posterCard) return;
+
+        try {
+            const canvas = await html2canvas(posterCard, {
+                backgroundColor: null,
+                scale: 2,
+                useCORS: true
+            });
+
+            canvas.toBlob(async (blob) => {
+                try {
+                    await navigator.clipboard.write([
+                        new ClipboardItem({ 'image/png': blob })
+                    ]);
+                    alert('海报已复制到剪贴板！');
+                } catch (e) {
+                    console.error('复制失败:', e);
+                    alert('复制失败，请使用保存图片功能');
+                }
+            }, 'image/png');
+        } catch (err) {
+            console.error('海报生成失败:', err);
+            alert('海报生成失败，请重试');
+        }
+    },
+
+    // ===== 章节选择 =====
+
+    async showChapterSelector() {
+        const modal = document.getElementById('chapter-select-modal');
+        const list = document.getElementById('chapter-list');
+        list.innerHTML = '';
+
+        const chaptersData = StoryLoader.cache.chapters || await StoryLoader.loadChapters();
+        chaptersData.chapters.forEach(chapter => {
+            const item = document.createElement('div');
+            item.className = 'chapter-item';
+            item.innerHTML = `
+                <div class="chapter-item-number">${chapter.id}</div>
+                <div class="chapter-item-info">
+                    <div class="chapter-item-title">${chapter.title}</div>
+                    <div class="chapter-item-location">📍 ${chapter.location}</div>
+                </div>
+            `;
+            item.addEventListener('click', () => {
+                modal.style.display = 'none';
+                Game.startChapter(chapter.id);
+            });
+            list.appendChild(item);
+        });
+        modal.style.display = 'flex';
+    },
+
+    // ===== 知识卡图鉴 =====
+
+    showCardsScreen() {
+        this.switchScreen('cards');
+        const grid = document.getElementById('cards-grid');
+        grid.innerHTML = '';
+
+        const allCards = StoryLoader.cache.knowledgeCards || {};
+        document.getElementById('cards-count').textContent = `${GameState.unlockedCards.length}/${Object.keys(allCards).length}`;
+
+        Object.entries(allCards).forEach(([id, card]) => {
+            const isUnlocked = GameState.unlockedCards.includes(id);
+            const cardEl = document.createElement('div');
+            cardEl.className = `card-item ${isUnlocked ? '' : 'locked'}`;
+            cardEl.innerHTML = `
+                <div class="card-item-header">
+                    <div class="card-item-icon">${isUnlocked ? '💡' : '🔒'}</div>
+                    <div>
+                        <div class="card-item-title">${isUnlocked ? card.title : '???'}</div>
+                    </div>
+                </div>
+                <div class="card-item-preview">${isUnlocked ? card.content : '探索剧情解锁此知识点'}</div>
+            `;
+            grid.appendChild(cardEl);
+        });
+    },
+
+    goBackToEndingOrMenu() {
+        this.switchScreen('ending');
+    },
+
+    // ===== 地图 =====
+
+    async showMap() {
+        const modal = document.getElementById('map-modal');
+        const container = document.getElementById('map-visual');
+        if (!modal || !container) return;
+
+        container.innerHTML = '';
+        const chaptersData = StoryLoader.cache.chapters || await StoryLoader.loadChapters();
+        const currentId = GameState.currentChapterId;
+        const completedIds = GameState.completedChapters;
+
+        chaptersData.chapters.forEach((chapter) => {
+            const isUnlocked = chapter.id <= currentId || completedIds.includes(chapter.id);
+            const isCompleted = completedIds.includes(chapter.id) || chapter.id < currentId;
+            const isCurrent = chapter.id === currentId;
+
+            let statusClass = 'locked';
+            if (isCurrent) statusClass = 'current unlocked';
+            else if (isCompleted) statusClass = 'completed unlocked';
+            else if (isUnlocked) statusClass = 'unlocked';
+
+            const row = document.createElement('div');
+            row.className = 'map-row';
+            row.innerHTML = `
+                <div class="map-node ${statusClass}" data-id="${chapter.id}">
+                    <div class="map-node-icon">${chapter.icon || '📍'}</div>
+                    <div class="map-node-info">
+                        <div class="map-node-title">第${chapter.id}章 ${chapter.title}</div>
+                        <div class="map-node-desc">${chapter.location}</div>
+                    </div>
+                </div>
+            `;
+
+            if (statusClass.includes('unlocked')) {
+                row.querySelector('.map-node').addEventListener('click', () => {
+                    if (isCurrent) {
+                        modal.style.display = 'none';
+                        return;
+                    }
+                    if (isCompleted || isCurrent) {
+                        if (confirm(`是否跳转到 第${chapter.id}章？\n注意：当前进度可能会丢失`)) {
+                            modal.style.display = 'none';
+                            Game.startChapter(chapter.id);
+                        }
+                    }
+                });
+            }
+
+            container.appendChild(row);
+        });
+
+        modal.style.display = 'flex';
     }
 };
 
