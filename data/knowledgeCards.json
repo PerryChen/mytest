@@ -39,7 +39,7 @@
         "content": "工厂出货 → 拖车到港 → 报关 → 海运 (25-45天) → 目的港清关 → 提柜送至海外仓。每个环节都需要精准的时间管理。",
         "category": "logistics",
         "tier": "advanced",
-        "relatedCards": ["MP_START", "DEALER_SUPPORT", "CHANNEL_ALLOC"]
+        "relatedCards": ["MP_START", "DEALER_SUPPORT", "LAUNCH_COORD"]
     },
     "DEALER_SUPPORT": {
         "title": "经销商支持",
@@ -62,9 +62,9 @@
         "tier": "advanced",
         "relatedCards": ["DVT_TOOLING", "EVT_GOAL"]
     },
-    "CHANNEL_ALLOC": {
-        "title": "渠道分配策略",
-        "content": "新品上市的库存分配需要严格遵循预定计划（Lock 仓机制）。线上与线下渠道按比例分配，避免'渠道打架'。紧俏 SKU 按签约配额比例公平分配，维护长期合作关系。",
+    "LAUNCH_COORD": {
+        "title": "上市协同清单",
+        "content": "新品上线前需要跨部门协同确认：产品页面（实拍图+文案）、库存状态同步、客服FAQ和培训、营销物料就位。任何一个环节掉链子都会影响用户第一印象和品牌口碑。",
         "category": "logistics",
         "tier": "advanced",
         "relatedCards": ["LOGISTICS", "DEALER_SUPPORT"]

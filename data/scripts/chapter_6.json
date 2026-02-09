@@ -2,98 +2,104 @@
     "start": {
         "speaker": "仓储 Jason",
         "avatar": "👷",
-        "text": "Hi V! 这里是美西仓库。你的 Discover 3 刚刚清关到达，正在卸货。",
-        "next": "inspect"
+        "text": "Hi V! 这里是美西仓库。你的 Discover 3 已经全部扫描入库，WMS 系统库存已更新。",
+        "next": "launch_meeting"
     },
-    "inspect": {
+    "launch_meeting": {
         "speaker": "小唯",
         "avatar": "🧑",
-        "text": "先做到货质检。Jason，开箱抽检比例是多少？",
-        "next": "inspect_result"
+        "text": "太好了！货到了，但上线前还有一堆事要协调。我召集一个跨部门同步会，确保所有环节都准备好。",
+        "next": "marketing_status"
     },
-    "inspect_result": {
-        "speaker": "仓储 Jason",
-        "avatar": "👷",
-        "text": "按 AQL 标准抽了 20 台，外观、电气、配件齐全度全部 PASS。这批货状态很好，海运没出问题。",
-        "next": "check_stock"
+    "marketing_status": {
+        "speaker": "市场部 Lisa",
+        "avatar": "📱",
+        "text": "产品页面文案已经定稿了，但有个问题——实拍图还没到，摄影团队排期到下周。目前页面上用的是 3D 渲染图。",
+        "next": "photo_choice"
     },
-    "check_stock": {
+    "photo_choice": {
         "speaker": "小唯",
         "avatar": "🧑",
-        "text": "太棒了。这批货怎么分配？官网订单和经销商订单都在催。",
+        "text": "产品页面的图片直接影响用户的购买决策。怎么处理？",
         "choices": [
             {
-                "text": "谁催得急给谁",
-                "next": "bad_alloc",
-                "score": 0,
-                "isCorrect": false,
-                "feedback": "不行！乱分配会导致渠道打架"
-            },
-            {
-                "text": "按预定的上市计划分配",
-                "next": "good_alloc",
+                "text": "等实拍图到位再上线，哪怕推迟几天",
+                "next": "wait_photos",
                 "score": 100,
                 "isCorrect": true,
-                "feedback": "严格执行计划！"
+                "feedback": "产品图真实性是用户信任的基础！"
+            },
+            {
+                "text": "先用渲染图上线，后面再替换",
+                "next": "render_issue",
+                "score": 0,
+                "isCorrect": false,
+                "feedback": "渲染图与实物有色差，容易翻车"
             }
         ]
     },
-    "bad_alloc": {
-        "speaker": "销售运营",
-        "avatar": "📉",
-        "text": "乱分配会导致渠道打架的。上次另一个品牌就是这样，官网降价甩货，经销商集体抗议。我们有既定的 Lock 仓计划。",
-        "next": "good_alloc"
+    "render_issue": {
+        "speaker": "市场部 Lisa",
+        "avatar": "📱",
+        "text": "渲染图和实车颜色会有色差。之前有品牌因为产品图和实物不符，上线第一周就被大量退货和差评轰炸。产品图的真实性是用户信任的第一步。",
+        "next": "wait_photos"
     },
-    "good_alloc": {
+    "wait_photos": {
         "speaker": "小唯",
         "avatar": "🧑",
-        "text": "严格执行上市计划。70% 给线下经销商铺货，30% 留给官网首发。每个经销商的配额是提前签好的。",
-        "unlockCard": "CHANNEL_ALLOC",
-        "next": "sku_question"
+        "text": "协调摄影团队优先排期，两天内完成 Discover 3 全色系实拍。上线日期顺延两天，但产品页质量不能打折扣。",
+        "next": "cs_prep"
     },
-    "sku_question": {
-        "speaker": "仓储 Jason",
-        "avatar": "👷",
-        "text": "这批共 3 个 SKU：黑色、白色、蓝色。但黑色占了 60%，白色只有 15%。有几个经销商专门要白色怎么办？",
-        "next": "sku_choice"
+    "cs_prep": {
+        "speaker": "客服主管 Amy",
+        "avatar": "🎧",
+        "text": "小唯，新品上线后客服咨询量肯定会激增。我这边需要产品 FAQ、常见问题手册，还有退换货政策的更新。",
+        "next": "cs_choice"
     },
-    "sku_choice": {
+    "cs_choice": {
         "speaker": "小唯",
         "avatar": "🧑",
-        "text": "白色紧俏...",
+        "text": "客服的准备工作怎么安排？",
         "choices": [
             {
-                "text": "按比例均分给所有经销商",
-                "next": "fair_split",
+                "text": "提前准备 FAQ 文档，安排客服团队做产品培训",
+                "next": "cs_ready",
                 "score": 100,
                 "isCorrect": true,
-                "feedback": "公平分配维护渠道关系！"
+                "feedback": "提前准备，主动应对！"
             },
             {
-                "text": "全给销量最大的经销商",
-                "next": "unfair_split",
-                "score": 0,
+                "text": "边做边学，客户问了再整理",
+                "next": "cs_unprepared",
+                "score": 50,
                 "isCorrect": false,
-                "feedback": "偏心分配会伤害其他合作伙伴"
+                "feedback": "被动应对会让客服手忙脚乱"
             }
         ]
     },
-    "unfair_split": {
-        "speaker": "销售运营",
-        "avatar": "📉",
-        "text": "如果只给大经销商，小经销商会觉得被歧视，影响长期合作。紧俏色要按签约配额比例分。",
-        "next": "fair_split"
+    "cs_unprepared": {
+        "speaker": "客服主管 Amy",
+        "avatar": "🎧",
+        "text": "上次新品上线第一天，客服被各种问题问爆了，平均响应时间从 2 分钟飙到 15 分钟，客户满意度直接掉了 20 个点。我们不能再重蹈覆辙了。",
+        "next": "cs_ready"
     },
-    "fair_split": {
+    "cs_ready": {
         "speaker": "小唯",
         "avatar": "🧑",
-        "text": "按各经销商的签约配额比例分配白色。同时告知下一批补货的白色占比会提高到 25%，给大家吃个定心丸。",
-        "next": "scan_in"
+        "text": "我来整理 Discover 3 的 FAQ 文档，涵盖续航、充电、助力模式、保修政策等高频问题。同时安排一场产品培训，让客服团队提前熟悉产品。",
+        "next": "go_live_check"
     },
-    "scan_in": {
+    "go_live_check": {
+        "speaker": "小唯",
+        "avatar": "🧑",
+        "text": "最终上线确认清单：库存到位 ✓ 产品页实拍图就绪 ✓ 客服 FAQ 和培训完成 ✓ 各部门确认 ready。新品上线是一场跨部门的协同作战，每个环节都不能掉链子。",
+        "unlockCard": "LAUNCH_COORD",
+        "next": "go_live"
+    },
+    "go_live": {
         "speaker": "仓储 Jason",
         "avatar": "👷",
-        "text": "收到。所有车辆 SKU 已扫描入库，系统库存已更新。官网可以开启'有货'状态了！",
+        "text": "系统状态已切换为'有货'。Discover 3 正式在美国市场上线！Good luck, V!",
         "next": "end_chapter"
     },
     "end_chapter": {
