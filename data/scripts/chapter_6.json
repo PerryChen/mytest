@@ -8,7 +8,7 @@
     "launch_meeting": {
         "speaker": "小唯",
         "avatar": "🧑",
-        "text": "货到了，接下来是上线准备。我召集跨部门同步会，确保所有环节都到位。",
+        "text": "收到！货到了，接下来是上线准备。我来召集跨部门同步会，确保所有环节到位。",
         "next": "photo_problem"
     },
     "photo_problem": {
@@ -38,6 +38,12 @@
             }
         ]
     },
+    "wait_logistics": {
+        "speaker": "市场部 Lisa",
+        "avatar": "📱",
+        "text": "一周太久了！新品上市窗口期稍纵即逝，我们得想别的办法。",
+        "next": "boss_carry"
+    },
     "boss_carry": {
         "speaker": "小唯",
         "avatar": "🧑",
@@ -48,6 +54,7 @@
         "speaker": "小唯",
         "avatar": "🧑",
         "text": "上线确认清单：库存到位 ✓ 产品页即将就绪 ✓ 各部门 ready ✓ 新品上市是一场跨部门的协同作战，速度和执行力决定成败。",
+        "style": "emphasis",
         "unlockCard": "LAUNCH_COORD",
         "next": "go_live"
     },

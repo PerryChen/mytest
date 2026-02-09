@@ -204,10 +204,21 @@ const UIManager = {
         const progress = (chapter.id / totalChapters) * 100;
         document.getElementById('progress-text').textContent = `${chapter.id} / ${totalChapters}`;
         document.getElementById('progress-fill').style.width = `${progress}%`;
-        this.scene.bg.className = `scene-background ${chapter.sceneClass}`;
+        const bg = this.scene.bg;
+        const oldScene = bg.className;
+        const newScene = `scene-background ${chapter.sceneClass}`;
+        if (oldScene !== newScene) {
+            bg.classList.add('scene-fade-out');
+            setTimeout(() => {
+                bg.className = `${newScene} scene-fade-in`;
+                setTimeout(() => bg.classList.remove('scene-fade-in'), 400);
+            }, 400);
+        }
     },
 
     // ===== 对话渲染 =====
+
+    _dialogStyleClasses: ['dialog-narration', 'dialog-system', 'dialog-emphasis'],
 
     renderDialogue(node) {
         try {
@@ -219,12 +230,23 @@ const UIManager = {
             this.dialog.avatar.textContent = '👤';
         }
 
+        // 对话样式变体
+        const box = this.dialog.box.querySelector('.dialog-box') || document.querySelector('.dialog-box');
+        if (box) {
+            this._dialogStyleClasses.forEach(c => box.classList.remove(c));
+            if (node.style === 'narration') box.classList.add('dialog-narration');
+            else if (node.style === 'system') box.classList.add('dialog-system');
+            else if (node.style === 'emphasis') box.classList.add('dialog-emphasis');
+        }
+
         const charArea = this.scene.characterArea;
         charArea.innerHTML = '';
-        const charDiv = document.createElement('div');
-        charDiv.className = 'character speaking';
-        charDiv.innerHTML = `<div class="character-avatar">${node.avatar || '👤'}</div>`;
-        charArea.appendChild(charDiv);
+        if (node.style !== 'narration' && node.style !== 'system') {
+            const charDiv = document.createElement('div');
+            charDiv.className = 'character speaking';
+            charDiv.innerHTML = `<div class="character-avatar">${node.avatar || '👤'}</div>`;
+            charArea.appendChild(charDiv);
+        }
 
         const choicesContainer = this.dialog.choices;
         choicesContainer.innerHTML = '';
@@ -907,6 +929,34 @@ const UIManager = {
         });
 
         modal.style.display = 'flex';
+    },
+
+    // ===== 选择反馈特效 =====
+
+    showConfetti() {
+        const container = document.createElement('div');
+        container.className = 'confetti-container';
+        const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
+        for (let i = 0; i < 16; i++) {
+            const piece = document.createElement('span');
+            piece.className = 'confetti-piece';
+            piece.style.background = colors[i % colors.length];
+            const angle = (i / 16) * Math.PI * 2;
+            const dist = 60 + Math.random() * 100;
+            piece.style.setProperty('--cx', `${Math.cos(angle) * dist}px`);
+            piece.style.setProperty('--cy', `${Math.sin(angle) * dist - 40}px`);
+            piece.style.setProperty('--cr', `${Math.random() * 720 - 360}deg`);
+            piece.style.animationDelay = `${Math.random() * 0.15}s`;
+            container.appendChild(piece);
+        }
+        document.body.appendChild(container);
+        setTimeout(() => container.remove(), 1500);
+    },
+
+    showScreenShake() {
+        const screen = document.getElementById('game-screen');
+        screen.classList.add('screen-shake');
+        setTimeout(() => screen.classList.remove('screen-shake'), 400);
     }
 };
 

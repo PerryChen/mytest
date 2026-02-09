@@ -11,7 +11,7 @@
 // ==========================================
 // 版本号（修改此处即可更新首页显示）
 // ==========================================
-const APP_VERSION = 'v3.2.0';
+const APP_VERSION = 'v3.3.0';
 
 // ==========================================
 // ⌨️ 打字机效果 TypeWriter
@@ -322,9 +322,11 @@ const Game = {
       if (choice.isCorrect) {
         AudioManager.playCorrect();
         if (clickedBtn) clickedBtn.classList.add('correct-choice');
+        UI.showConfetti();
       } else {
         AudioManager.playWrong();
         if (clickedBtn) clickedBtn.classList.add('wrong-choice');
+        UI.showScreenShake();
         allButtons.forEach((btn, index) => {
           const currentNode = this.currentScript[GameEngine.state.currentDialogueId];
           if (currentNode.choices?.[index]?.isCorrect) {
