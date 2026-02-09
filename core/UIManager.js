@@ -30,7 +30,8 @@ const UIManager = {
                 transition: document.getElementById('transition-screen'),
                 complete: document.getElementById('chapter-complete-screen'),
                 ending: document.getElementById('ending-screen'),
-                cards: document.getElementById('cards-screen')
+                cards: document.getElementById('cards-screen'),
+                assessment: document.getElementById('assessment-screen')
             },
             header: {
                 badge: document.getElementById('chapter-badge'),
@@ -127,8 +128,16 @@ const UIManager = {
 
         document.getElementById('sound-toggle-btn').addEventListener('click', () => AudioManager.toggleSound());
 
-        // DLC Demo 按钮
-        document.getElementById('dlc-demo-btn').addEventListener('click', () => Game.startDLC('gtm_demo'));
+        // DLC 按钮 → 打开选择器
+        document.getElementById('dlc-demo-btn').addEventListener('click', () => this.showDLCSelector());
+
+        // 测评按钮
+        document.getElementById('assessment-btn').addEventListener('click', () => this.showAssessmentSetup());
+        document.getElementById('assessment-back-btn').addEventListener('click', () => this.switchScreen('intro'));
+        document.getElementById('start-assessment-btn').addEventListener('click', () => this.startAssessment());
+        document.getElementById('next-question-btn').addEventListener('click', () => this.renderAssessmentQuestion());
+        document.getElementById('retry-assessment-btn').addEventListener('click', () => this.showAssessmentSetup());
+        document.getElementById('back-to-menu-btn').addEventListener('click', () => this.switchScreen('intro'));
 
         // 地图按钮
         const mapBtn = document.getElementById('map-btn');
@@ -312,7 +321,7 @@ const UIManager = {
 
     // ===== 结局画面 =====
 
-    showEnding() {
+    async showEnding() {
         this.switchScreen('ending');
         AudioManager.playEnding();
         document.getElementById('total-score').textContent = GameState.score;
@@ -321,8 +330,44 @@ const UIManager = {
         if (GameState.gameStartTime) {
             GameState.completionTime = Date.now() - GameState.gameStartTime;
         }
-        GameState.save();
 
+        // 动态结局：根据分数加载对应结局
+        let ending = null;
+        if (typeof EndingsManager !== 'undefined') {
+            try {
+                await EndingsManager.loadEndings();
+                ending = EndingsManager.getEndingForScore(GameState.score);
+                GameEngine.state.endingId = ending.id;
+            } catch (e) {
+                console.warn('[UIManager] Failed to load endings, using default');
+            }
+        }
+
+        if (ending) {
+            // 更新结局标题/描述
+            document.querySelector('.ending-title').textContent = ending.title;
+            document.querySelector('.ending-subtitle').textContent = ending.subtitle;
+            const journeyEl = document.querySelector('.journey-complete');
+            if (journeyEl) {
+                journeyEl.innerHTML = `<p>${ending.description}</p>`;
+            }
+            // 更新动画 emoji
+            const animEl = document.querySelector('.ending-animation');
+            if (animEl && ending.animation) {
+                animEl.innerHTML = ending.animation.map(e => `<span>${e}</span>`).join('');
+            }
+            // 更新证书等级
+            const certLabel = document.querySelector('.cert-name-label:last-child');
+            if (certLabel) {
+                certLabel.textContent = `已完成全部培训（${ending.certificateLevel}）`;
+            }
+            // 设置结局主题样式
+            const endingScreen = document.getElementById('ending-screen');
+            endingScreen.classList.remove('ending-basic', 'ending-good', 'ending-perfect');
+            endingScreen.classList.add(`ending-${ending.id}`);
+        }
+
+        GameState.save();
         this.checkAndShowAchievements();
     },
 
@@ -483,16 +528,53 @@ const UIManager = {
 
     // ===== 知识卡图鉴 =====
 
+    _cardFilter: 'all',
+
     showCardsScreen() {
         this.switchScreen('cards');
+        this._cardFilter = 'all';
+        this._renderCardsWithFilter();
+    },
+
+    _renderCardsWithFilter() {
         const grid = document.getElementById('cards-grid');
         grid.innerHTML = '';
 
         const allCards = StoryLoader.cache.knowledgeCards || {};
+        const categoryNames = {
+            all: '全部', product: '产品', engineering: '工程',
+            manufacturing: '制造', logistics: '物流', sales: '销售', marketing: '营销'
+        };
+        const tierLabels = { basic: '基础', advanced: '进阶', expert: '专家' };
+        const tierColors = { basic: '#4CAF50', advanced: '#2196F3', expert: '#FF9800' };
+
+        // 分类筛选栏
+        let filterBar = document.getElementById('cards-filter-bar');
+        if (!filterBar) {
+            filterBar = document.createElement('div');
+            filterBar.id = 'cards-filter-bar';
+            filterBar.className = 'cards-filter-bar';
+            grid.parentNode.insertBefore(filterBar, grid);
+        }
+        filterBar.innerHTML = '';
+        const categories = ['all', ...Object.keys(StoryLoader.getCardCategories())];
+        categories.forEach(cat => {
+            const tag = document.createElement('button');
+            tag.className = `filter-tag ${this._cardFilter === cat ? 'active' : ''}`;
+            tag.textContent = categoryNames[cat] || cat;
+            tag.onclick = () => { this._cardFilter = cat; this._renderCardsWithFilter(); };
+            filterBar.appendChild(tag);
+        });
+
+        // 过滤并渲染卡片
+        const filtered = Object.entries(allCards).filter(([, card]) =>
+            this._cardFilter === 'all' || card.category === this._cardFilter
+        );
         document.getElementById('cards-count').textContent = `${GameState.unlockedCards.length}/${Object.keys(allCards).length}`;
 
-        Object.entries(allCards).forEach(([id, card]) => {
+        filtered.forEach(([id, card]) => {
             const isUnlocked = GameState.unlockedCards.includes(id);
+            const tier = card.tier || 'basic';
             const cardEl = document.createElement('div');
             cardEl.className = `card-item ${isUnlocked ? '' : 'locked'}`;
             cardEl.innerHTML = `
@@ -500,16 +582,276 @@ const UIManager = {
                     <div class="card-item-icon">${isUnlocked ? '💡' : '🔒'}</div>
                     <div>
                         <div class="card-item-title">${isUnlocked ? card.title : '???'}</div>
+                        ${isUnlocked ? `<span class="card-tier-badge" style="background:${tierColors[tier]}">${tierLabels[tier]}</span>` : ''}
                     </div>
                 </div>
                 <div class="card-item-preview">${isUnlocked ? card.content : '探索剧情解锁此知识点'}</div>
             `;
+            if (isUnlocked) {
+                cardEl.style.cursor = 'pointer';
+                cardEl.onclick = () => this.showCardDetail(id);
+            }
             grid.appendChild(cardEl);
         });
     },
 
+    showCardDetail(cardId) {
+        const card = StoryLoader.getKnowledgeCard(cardId);
+        if (!card) return;
+
+        const tierLabels = { basic: '基础', advanced: '进阶', expert: '专家' };
+        const categoryNames = {
+            product: '产品', engineering: '工程', manufacturing: '制造',
+            logistics: '物流', sales: '销售', marketing: '营销'
+        };
+
+        let modal = document.getElementById('card-detail-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'card-detail-modal';
+            modal.className = 'card-detail-modal';
+            document.body.appendChild(modal);
+        }
+
+        const relatedHtml = (card.relatedCards || []).map(rid => {
+            const rc = StoryLoader.getKnowledgeCard(rid);
+            const unlocked = GameState.unlockedCards.includes(rid);
+            return rc ? `<span class="related-card-tag ${unlocked ? '' : 'locked'}">${unlocked ? rc.title : '???'}</span>` : '';
+        }).join('');
+
+        modal.innerHTML = `
+            <div class="card-detail-content">
+                <button class="btn-close card-detail-close">×</button>
+                <div class="card-detail-header">
+                    <span class="card-detail-icon">💡</span>
+                    <h3>${card.title}</h3>
+                </div>
+                <div class="card-detail-meta">
+                    <span class="card-category-badge">${categoryNames[card.category] || card.category}</span>
+                    <span class="card-tier-badge card-tier-${card.tier}">${tierLabels[card.tier] || card.tier}</span>
+                </div>
+                <p class="card-detail-body">${card.content}</p>
+                ${relatedHtml ? `<div class="card-detail-related"><h4>相关知识卡</h4><div class="related-cards-list">${relatedHtml}</div></div>` : ''}
+            </div>
+        `;
+        modal.style.display = 'flex';
+        modal.querySelector('.card-detail-close').onclick = () => modal.style.display = 'none';
+        modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+    },
+
     goBackToEndingOrMenu() {
         this.switchScreen('ending');
+    },
+
+    // ===== 知识测评 =====
+
+    showAssessmentSetup() {
+        this.switchScreen('assessment');
+        document.getElementById('assessment-setup').style.display = 'flex';
+        document.getElementById('assessment-body').style.display = 'none';
+        document.getElementById('assessment-results').style.display = 'none';
+        document.getElementById('assessment-progress').textContent = '';
+    },
+
+    async startAssessment() {
+        const timed = document.getElementById('assessment-timed').checked;
+        const count = await AssessmentEngine.startAssessment({ timed, timeLimit: 600 });
+
+        if (count === 0) {
+            alert('暂无可用题目');
+            return;
+        }
+
+        document.getElementById('assessment-setup').style.display = 'none';
+        document.getElementById('assessment-body').style.display = 'flex';
+        document.getElementById('assessment-results').style.display = 'none';
+
+        // 定时器显示
+        const timerEl = document.getElementById('assessment-timer');
+        if (timed) {
+            timerEl.style.display = 'flex';
+            this._assessmentTimerInterval = setInterval(() => {
+                const remaining = AssessmentEngine.getRemainingTime();
+                if (remaining === null || remaining <= 0) {
+                    clearInterval(this._assessmentTimerInterval);
+                    this.showAssessmentResults();
+                    return;
+                }
+                const min = Math.floor(remaining / 60);
+                const sec = remaining % 60;
+                document.getElementById('timer-value').textContent = `${min}:${sec.toString().padStart(2, '0')}`;
+            }, 1000);
+            AssessmentEngine._onTimeout = () => this.showAssessmentResults();
+        } else {
+            timerEl.style.display = 'none';
+        }
+
+        this.renderAssessmentQuestion();
+    },
+
+    renderAssessmentQuestion() {
+        const question = AssessmentEngine.getCurrentQuestion();
+        if (!question) {
+            this.showAssessmentResults();
+            return;
+        }
+
+        const idx = AssessmentEngine.currentIndex;
+        const total = AssessmentEngine.questions.length;
+        document.getElementById('assessment-progress').textContent = `${idx + 1}/${total}`;
+        document.getElementById('assessment-progress-fill').style.width = `${((idx) / total) * 100}%`;
+        document.getElementById('assessment-question-number').textContent = `第 ${idx + 1} 题`;
+        document.getElementById('assessment-question-text').textContent = question.question;
+
+        const answersContainer = document.getElementById('assessment-answers');
+        answersContainer.innerHTML = '';
+        document.getElementById('assessment-explanation').style.display = 'none';
+
+        question.options.forEach((opt, i) => {
+            const btn = document.createElement('div');
+            btn.className = 'choice-btn choice-slide-in';
+            btn.style.animationDelay = `${i * 80}ms`;
+            btn.innerHTML = `<div class="choice-letter">${String.fromCharCode(65 + i)}</div>${opt}`;
+            btn.onclick = () => this._handleAssessmentAnswer(i, btn);
+            answersContainer.appendChild(btn);
+        });
+    },
+
+    _handleAssessmentAnswer(answerIndex, btnEl) {
+        // 禁止重复点击
+        const allBtns = document.querySelectorAll('#assessment-answers .choice-btn');
+        allBtns.forEach(b => { b.style.pointerEvents = 'none'; });
+
+        const result = AssessmentEngine.answerQuestion(answerIndex);
+        if (!result) return;
+
+        // 标记正确/错误
+        if (result.correct) {
+            btnEl.classList.add('correct-choice');
+        } else {
+            btnEl.classList.add('wrong-choice');
+            // 标记正确答案
+            allBtns[result.correctIndex]?.classList.add('hint-correct');
+        }
+
+        // 显示解析
+        const explanationEl = document.getElementById('assessment-explanation');
+        const contentEl = document.getElementById('explanation-content');
+        contentEl.innerHTML = `<span class="explanation-verdict ${result.correct ? 'correct' : 'wrong'}">${result.correct ? '回答正确' : '回答错误'}</span> ${result.explanation}`;
+        explanationEl.style.display = 'block';
+
+        // 更新进度条
+        const idx = AssessmentEngine.currentIndex;
+        const total = AssessmentEngine.questions.length;
+        document.getElementById('assessment-progress-fill').style.width = `${(idx / total) * 100}%`;
+
+        // 如果是最后一题，按钮文字改变
+        const nextBtn = document.getElementById('next-question-btn');
+        nextBtn.textContent = idx >= total ? '查看结果' : '下一题';
+    },
+
+    showAssessmentResults() {
+        if (this._assessmentTimerInterval) {
+            clearInterval(this._assessmentTimerInterval);
+            this._assessmentTimerInterval = null;
+        }
+
+        const results = AssessmentEngine.getResults();
+
+        document.getElementById('assessment-setup').style.display = 'none';
+        document.getElementById('assessment-body').style.display = 'none';
+        document.getElementById('assessment-results').style.display = 'flex';
+
+        // 图标和标题
+        let icon = '📝', title = '继续加油';
+        if (results.percentage >= 90) { icon = '🏆'; title = '太棒了！'; }
+        else if (results.percentage >= 70) { icon = '🌟'; title = '表现优秀！'; }
+        else if (results.percentage >= 50) { icon = '💪'; title = '还不错！'; }
+        document.getElementById('results-icon').textContent = icon;
+        document.getElementById('results-title').textContent = title;
+
+        // 分数
+        document.getElementById('results-percentage').textContent = `${results.percentage}%`;
+        document.getElementById('results-correct').textContent = results.score;
+        document.getElementById('results-total').textContent = results.total;
+
+        // 用时
+        const min = Math.floor(results.timeSpent / 60);
+        const sec = results.timeSpent % 60;
+        document.getElementById('results-time').textContent = min > 0 ? `${min}分${sec}秒` : `${sec}秒`;
+
+        // 圆环颜色
+        const circle = document.getElementById('results-circle');
+        if (results.percentage >= 90) circle.style.borderColor = 'var(--success)';
+        else if (results.percentage >= 70) circle.style.borderColor = 'var(--primary)';
+        else if (results.percentage >= 50) circle.style.borderColor = 'var(--warning)';
+        else circle.style.borderColor = 'hsl(0, 70%, 55%)';
+
+        // 错题列表
+        const wrongListEl = document.getElementById('results-wrong-list');
+        const wrongItemsEl = document.getElementById('wrong-items');
+        if (results.wrongAnswers.length > 0) {
+            wrongListEl.style.display = 'block';
+            wrongItemsEl.innerHTML = results.wrongAnswers.map(w => `
+                <div class="wrong-item">
+                    <div class="wrong-question">${w.question}</div>
+                    <div class="wrong-detail">
+                        <span class="wrong-given">你的答案：${w.givenAnswer}</span>
+                        <span class="wrong-correct">正确答案：${w.correctAnswer}</span>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            wrongListEl.style.display = 'none';
+        }
+
+        document.getElementById('assessment-progress').textContent = '完成';
+    },
+
+    // ===== DLC 选择器 =====
+
+    async showDLCSelector() {
+        let modal = document.getElementById('dlc-selector-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'dlc-selector-modal';
+            modal.className = 'card-detail-modal';
+            document.body.appendChild(modal);
+        }
+
+        const registry = await DLCLoader.loadRegistry();
+        const dlcListHtml = registry.map(dlc => {
+            const progress = localStorage.getItem(`velotric_dlc_${dlc.id}_complete`) ? 'completed' : 'available';
+            return `
+                <div class="dlc-item" data-dlc-id="${dlc.id}">
+                    <div class="dlc-item-icon">${dlc.icon || '📦'}</div>
+                    <div class="dlc-item-info">
+                        <div class="dlc-item-name">${dlc.name}</div>
+                        <div class="dlc-item-desc">${dlc.description || ''}</div>
+                        <div class="dlc-item-meta">${dlc.chapters} 章节 · ${dlc.cards} 知识卡</div>
+                    </div>
+                    <span class="dlc-status ${progress}">${progress === 'completed' ? '已完成' : '开始'}</span>
+                </div>
+            `;
+        }).join('');
+
+        modal.innerHTML = `
+            <div class="card-detail-content">
+                <button class="btn-close card-detail-close">×</button>
+                <h3 style="margin-bottom:16px">📦 DLC 扩展剧情</h3>
+                <div class="dlc-list">${dlcListHtml || '<p style="color:var(--text-muted)">暂无可用 DLC</p>'}</div>
+            </div>
+        `;
+        modal.style.display = 'flex';
+        modal.querySelector('.card-detail-close').onclick = () => modal.style.display = 'none';
+        modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+
+        modal.querySelectorAll('.dlc-item').forEach(item => {
+            item.addEventListener('click', () => {
+                modal.style.display = 'none';
+                Game.startDLC(item.dataset.dlcId);
+            });
+        });
     },
 
     // ===== 地图 =====

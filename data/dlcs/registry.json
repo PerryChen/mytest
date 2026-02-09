@@ -1,0 +1,15 @@
+{
+    "dlcs": [
+        {
+            "id": "gtm_demo",
+            "name": "GTM 上市流程",
+            "description": "体验产品 Go To Market 全流程：定价策略和营销预热",
+            "version": "1.0.0",
+            "chapters": 2,
+            "cards": 2,
+            "icon": "🚀",
+            "department": "marketing",
+            "status": "available"
+        }
+    ]
+}

@@ -1,0 +1,34 @@
+{
+    "endings": [
+        {
+            "id": "basic",
+            "title": "初出茅庐",
+            "subtitle": "你完成了基础培训",
+            "description": "你走完了旅程，但还有很多知识可以深入学习。试试重新挑战，做出更好的决策！",
+            "animation": ["📝", "✅", "📝"],
+            "minScore": 0,
+            "maxScore": 499,
+            "certificateLevel": "基础"
+        },
+        {
+            "id": "good",
+            "title": "出色表现",
+            "subtitle": "你展现了优秀的学习能力",
+            "description": "你在大多数关键决策中做出了正确选择，展现了扎实的产品开发知识。",
+            "animation": ["🌟", "🏅", "🌟"],
+            "minScore": 500,
+            "maxScore": 699,
+            "certificateLevel": "优秀"
+        },
+        {
+            "id": "perfect",
+            "title": "完美通关",
+            "subtitle": "小唯的成长之旅圆满结束",
+            "description": "从深圳办公室到旧金山金门大桥，你见证了一辆 Velotric Discover 3 的诞生。",
+            "animation": ["🎊", "🏆", "🎊"],
+            "minScore": 700,
+            "maxScore": 9999,
+            "certificateLevel": "卓越"
+        }
+    ]
+}

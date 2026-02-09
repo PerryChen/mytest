@@ -1,34 +1,79 @@
 {
     "MRD_PRD": {
         "title": "MRD vs PRD",
-        "content": "MRD (市场需求文档) 解决'为什么卖得出去'，讲商业故事；PRD (产品需求文档) 解决'做成什么样'，讲功能规格。需求阶段是成本最低的'后悔药'。"
+        "content": "MRD (市场需求文档) 解决'为什么卖得出去'，讲商业故事；PRD (产品需求文档) 解决'做成什么样'，讲功能规格。需求阶段是成本最低的'后悔药'。",
+        "category": "product",
+        "tier": "basic",
+        "relatedCards": ["EVT_GOAL"]
     },
     "EVT_GOAL": {
         "title": "EVT 核心目标",
-        "content": "EVT (工程验证测试) 的核心不是看外观，而是看核心技术风险是否解除。发现 Bug 是功劳，千万不要报喜不报忧。"
+        "content": "EVT (工程验证测试) 的核心不是看外观，而是看核心技术风险是否解除。发现 Bug 是功劳，千万不要报喜不报忧。",
+        "category": "engineering",
+        "tier": "basic",
+        "relatedCards": ["MRD_PRD", "DVT_TOOLING"]
     },
     "DVT_TOOLING": {
         "title": "DVT 开模定型",
-        "content": "DVT (设计验证测试) 标志着模具的启动。这是最后一次无需昂贵代价修改设计的机会窗口。"
+        "content": "DVT (设计验证测试) 标志着模具的启动。这是最后一次无需昂贵代价修改设计的机会窗口。",
+        "category": "engineering",
+        "tier": "advanced",
+        "relatedCards": ["EVT_GOAL", "PVT_RULES", "UL_CERT"]
     },
     "PVT_RULES": {
         "title": "PVT 三大铁律",
-        "content": "PVT (生产验证测试) 必须在真实流水线进行。核心关注：良率、节拍、一致性。严禁随意变更设计。"
+        "content": "PVT (生产验证测试) 必须在真实流水线进行。核心关注：良率、节拍、一致性。严禁随意变更设计。",
+        "category": "manufacturing",
+        "tier": "advanced",
+        "relatedCards": ["DVT_TOOLING", "MP_START", "SUPPLY_CHAIN"]
     },
     "MP_START": {
         "title": "MP 是新的开始",
-        "content": "MP (量产) 不是结束，而是产品正式交棒给市场、销售、供应链、服务团队的开始。此时重点转向交付与售后。"
+        "content": "MP (量产) 不是结束，而是产品正式交棒给市场、销售、供应链、服务团队的开始。此时重点转向交付与售后。",
+        "category": "manufacturing",
+        "tier": "basic",
+        "relatedCards": ["PVT_RULES", "LOGISTICS"]
     },
     "LOGISTICS": {
         "title": "跨境物流链",
-        "content": "工厂出货 → 拖车到港 → 报关 → 海运 (25-45天) → 目的港清关 → 提柜送至海外仓。每个环节都需要精准的时间管理。"
+        "content": "工厂出货 → 拖车到港 → 报关 → 海运 (25-45天) → 目的港清关 → 提柜送至海外仓。每个环节都需要精准的时间管理。",
+        "category": "logistics",
+        "tier": "advanced",
+        "relatedCards": ["MP_START", "DEALER_SUPPORT", "CHANNEL_ALLOC"]
     },
     "DEALER_SUPPORT": {
         "title": "经销商支持",
-        "content": "不仅要给经销商供货，还要提供培训、展示物料和售后支持，帮助他们更好地向用户推销产品。"
+        "content": "不仅要给经销商供货，还要提供培训、展示物料和售后支持，帮助他们更好地向用户推销产品。",
+        "category": "sales",
+        "tier": "basic",
+        "relatedCards": ["LOGISTICS", "USER_VALUE"]
     },
     "USER_VALUE": {
         "title": "用户价值交付",
-        "content": "产品的最终归宿是用户的使用体验。开箱的便利性、组装的引导、第一次骑行的感受，决定了口碑和品牌忠诚度。"
+        "content": "产品的最终归宿是用户的使用体验。开箱的便利性、组装的引导、第一次骑行的感受，决定了口碑和品牌忠诚度。用户反馈是产品迭代的核心驱动力。",
+        "category": "sales",
+        "tier": "expert",
+        "relatedCards": ["DEALER_SUPPORT"]
+    },
+    "UL_CERT": {
+        "title": "UL 2849 安全认证",
+        "content": "UL 2849 是北美电动自行车的强制安全认证标准。测试项涵盖电气安全、电池短路保护、机械强度、充电器兼容性等。认证周期约 6-8 周，不通过则无法在美国合法销售。",
+        "category": "engineering",
+        "tier": "advanced",
+        "relatedCards": ["DVT_TOOLING", "EVT_GOAL"]
+    },
+    "CHANNEL_ALLOC": {
+        "title": "渠道分配策略",
+        "content": "新品上市的库存分配需要严格遵循预定计划（Lock 仓机制）。线上与线下渠道按比例分配，避免'渠道打架'。紧俏 SKU 按签约配额比例公平分配，维护长期合作关系。",
+        "category": "logistics",
+        "tier": "advanced",
+        "relatedCards": ["LOGISTICS", "DEALER_SUPPORT"]
+    },
+    "SUPPLY_CHAIN": {
+        "title": "供应链变更管理",
+        "content": "量产阶段任何物料变更都必须通过 ECN（工程变更通知）流程。擅自更换零部件可能影响扭力标准、震动测试等安全指标，也会打乱供应商备货节奏。稳定性是 PVT/MP 阶段的第一优先级。",
+        "category": "manufacturing",
+        "tier": "advanced",
+        "relatedCards": ["PVT_RULES", "MP_START"]
     }
 }

@@ -11,18 +11,18 @@
         "text": "柜子已经订好了。船期是下周三。小唯，这批货是急着赶美国黑五促销的吗？",
         "choices": [
             {
-                "text": "不急，慢船省钱",
-                "next": "miss_date",
-                "score": 50,
-                "isCorrect": false,
-                "feedback": "糟糕！会错过黑五促销"
-            },
-            {
                 "text": "很急，必须保证时效",
                 "next": "fast_ship",
                 "score": 100,
                 "isCorrect": true,
                 "feedback": "正确！交付时效很重要"
+            },
+            {
+                "text": "不急，慢船省钱",
+                "next": "miss_date",
+                "score": 50,
+                "isCorrect": false,
+                "feedback": "糟糕！会错过黑五促销"
             }
         ]
     },

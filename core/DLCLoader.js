@@ -5,6 +5,8 @@
 const DLCLoader = {
     // 已加载的 DLC 列表
     loadedDLCs: {},
+    // DLC 注册表缓存
+    _registry: null,
 
     /**
      * 加载 DLC 清单
@@ -55,13 +57,32 @@ const DLCLoader = {
     },
 
     /**
-     * 获取可用 DLC 列表
-     * @returns {Promise<Array>} DLC 列表
+     * 加载 DLC 注册表
+     * @returns {Promise<Array>} DLC 列表详情
+     */
+    async loadRegistry() {
+        if (this._registry) return this._registry;
+        try {
+            const response = await fetch('data/dlcs/registry.json', { cache: 'no-cache' });
+            if (!response.ok) throw new Error('Failed to load DLC registry');
+            const data = await response.json();
+            this._registry = data.dlcs || [];
+            console.log('[DLCLoader] Registry loaded:', this._registry.length, 'DLCs');
+            return this._registry;
+        } catch (error) {
+            console.warn('[DLCLoader] Registry load failed, using fallback');
+            this._registry = [{ id: 'gtm_demo', name: 'GTM 上市流程', icon: '🚀', chapters: 2, cards: 2 }];
+            return this._registry;
+        }
+    },
+
+    /**
+     * 获取可用 DLC 列表（兼容旧接口）
+     * @returns {Promise<Array>} DLC ID 列表
      */
     async getAvailableDLCs() {
-        // 简单实现：返回已知的 DLC ID 列表
-        // 生产环境可从服务器获取
-        return ['gtm_demo'];
+        const registry = await this.loadRegistry();
+        return registry.map(d => d.id);
     }
 };
 

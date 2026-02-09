@@ -20,7 +20,7 @@
         <div class="logo-area">
           <span class="bike-icon">🚴‍♂️</span>
         </div>
-        <h1 class="game-title">Ebike新产品开发 V2.0</h1>
+        <h1 class="game-title">Ebike新产品开发</h1>
         <p class="game-subtitle">一个新人的成长故事</p>
         <p class="game-desc">跟随小唯，走过从需求到骑行的完整旅程</p>
 
@@ -47,12 +47,16 @@
             <span>📖</span> 章节选择
           </button>
           <button id="dlc-demo-btn" class="btn btn-secondary">
-            <span>🎁</span> DLC Demo
+            <span>📦</span> DLC 扩展剧情
+          </button>
+          <button id="assessment-btn" class="btn btn-secondary">
+            <span>📝</span> 知识测评
           </button>
           <a href="admin.html" class="btn btn-ghost" id="admin-link">
             <span>⚙️</span> 配置管理
           </a>
         </div>
+        <div class="version-tag" id="version-tag"></div>
       </div>
     </section>
 
@@ -316,6 +320,79 @@
       </div>
     </section>
 
+    <!-- ===== 知识测评界面 ===== -->
+    <section id="assessment-screen" class="screen">
+      <header class="screen-header">
+        <button class="btn-back" id="assessment-back-btn">← 返回</button>
+        <h2>📝 知识测评</h2>
+        <div class="assessment-progress" id="assessment-progress">0/0</div>
+      </header>
+
+      <!-- 测评设置（初始状态） -->
+      <div class="assessment-setup" id="assessment-setup">
+        <div class="assessment-setup-content">
+          <div class="assessment-setup-icon">📝</div>
+          <h3>知识测评</h3>
+          <p>检验你在产品开发旅程中学到的知识</p>
+          <div class="assessment-options">
+            <label class="assessment-option">
+              <input type="checkbox" id="assessment-timed"> 限时模式（10分钟）
+            </label>
+          </div>
+          <button class="btn btn-primary btn-large" id="start-assessment-btn">开始测评</button>
+        </div>
+      </div>
+
+      <!-- 题目区域 -->
+      <div class="assessment-body" id="assessment-body" style="display: none;">
+        <div class="assessment-timer" id="assessment-timer" style="display: none;">
+          <span class="timer-icon">⏱️</span>
+          <span class="timer-value" id="timer-value">10:00</span>
+        </div>
+        <div class="assessment-progress-bar">
+          <div class="assessment-progress-fill" id="assessment-progress-fill" style="width: 0%;"></div>
+        </div>
+        <div class="assessment-question-card" id="assessment-question-card">
+          <div class="assessment-question-number" id="assessment-question-number">第 1 题</div>
+          <div class="assessment-question-text" id="assessment-question-text">题目内容</div>
+          <div class="assessment-answers" id="assessment-answers">
+            <!-- 动态生成 -->
+          </div>
+        </div>
+        <div class="assessment-explanation" id="assessment-explanation" style="display: none;">
+          <div class="explanation-content" id="explanation-content"></div>
+          <button class="btn btn-primary" id="next-question-btn">下一题</button>
+        </div>
+      </div>
+
+      <!-- 结果页 -->
+      <div class="assessment-results" id="assessment-results" style="display: none;">
+        <div class="results-header">
+          <div class="results-icon" id="results-icon">🎉</div>
+          <h3 class="results-title" id="results-title">测评完成</h3>
+        </div>
+        <div class="results-score">
+          <div class="results-circle" id="results-circle">
+            <span class="results-percentage" id="results-percentage">0%</span>
+          </div>
+          <div class="results-detail">
+            <div class="results-stat">答对 <strong id="results-correct">0</strong> / <strong id="results-total">0</strong> 题</div>
+            <div class="results-stat">用时 <strong id="results-time">0</strong> 秒</div>
+          </div>
+        </div>
+        <div class="results-wrong-list" id="results-wrong-list" style="display: none;">
+          <h4>错题回顾</h4>
+          <div class="wrong-items" id="wrong-items">
+            <!-- 动态生成 -->
+          </div>
+        </div>
+        <div class="results-actions">
+          <button class="btn btn-secondary" id="retry-assessment-btn">重新测评</button>
+          <button class="btn btn-primary" id="back-to-menu-btn">返回主菜单</button>
+        </div>
+      </div>
+    </section>
+
     <!-- ===== 知识卡图鉴界面 ===== -->
     <section id="cards-screen" class="screen">
       <header class="screen-header">
@@ -347,6 +424,8 @@
   <script src="core/GameEngine.js"></script>
   <script src="core/UIManager.js"></script>
   <script src="core/DLCLoader.js"></script>
+  <script src="core/EndingsManager.js"></script>
+  <script src="core/AssessmentEngine.js"></script>
   <script src="admin_theme.js"></script>
   <!-- Main Game -->
   <script src="game.js"></script>

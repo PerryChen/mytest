@@ -1,0 +1,21 @@
+{
+    "id": "your_dlc_id",
+    "name": "DLC 名称",
+    "version": "1.0.0",
+    "chapters": [
+        {
+            "id": "chapter_1",
+            "title": "第一章标题",
+            "location": "地点",
+            "scriptFile": "chapter_1.json"
+        }
+    ],
+    "knowledgeCards": {
+        "YOUR_CARD_ID": {
+            "title": "知识卡标题",
+            "content": "知识卡内容描述",
+            "category": "product",
+            "tier": "basic"
+        }
+    }
+}

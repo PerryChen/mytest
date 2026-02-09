@@ -117,6 +117,48 @@ const StoryLoader = {
     },
 
     /**
+     * 按分类获取知识卡片
+     * @param {string} category - 分类名
+     * @returns {Object} { cardId: cardData }
+     */
+    getCardsByCategory(category) {
+        if (!this.cache.knowledgeCards) return {};
+        const result = {};
+        Object.entries(this.cache.knowledgeCards).forEach(([id, card]) => {
+            if (card.category === category) result[id] = card;
+        });
+        return result;
+    },
+
+    /**
+     * 按层级获取知识卡片
+     * @param {string} tier - basic/advanced/expert
+     * @returns {Object} { cardId: cardData }
+     */
+    getCardsByTier(tier) {
+        if (!this.cache.knowledgeCards) return {};
+        const result = {};
+        Object.entries(this.cache.knowledgeCards).forEach(([id, card]) => {
+            if (card.tier === tier) result[id] = card;
+        });
+        return result;
+    },
+
+    /**
+     * 获取所有卡片分类及其计数
+     * @returns {Object} { category: count }
+     */
+    getCardCategories() {
+        if (!this.cache.knowledgeCards) return {};
+        const counts = {};
+        Object.values(this.cache.knowledgeCards).forEach(card => {
+            const cat = card.category || 'other';
+            counts[cat] = (counts[cat] || 0) + 1;
+        });
+        return counts;
+    },
+
+    /**
      * 清除缓存（用于调试或重新加载）
      */
     clearCache() {

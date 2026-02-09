@@ -1,5 +1,5 @@
 /**
- * 电动出行造车记 v2.1 - 入口文件
+ * Ebike新产品开发 - 入口文件
  * 核心逻辑已迁移到 core/ 模块
  * 本文件负责：
  * 1. TypeWriter 打字机效果
@@ -7,6 +7,11 @@
  * 3. Game 游戏控制器
  * 4. 初始化引导
  */
+
+// ==========================================
+// 版本号（修改此处即可更新首页显示）
+// ==========================================
+const APP_VERSION = 'v3.1.0';
 
 // ==========================================
 // ⌨️ 打字机效果 TypeWriter
@@ -187,12 +192,46 @@ const Game = {
     });
   },
 
+  /**
+   * 评估条件表达式
+   * @param {Object} condition - { type, value, cardId, chapterId }
+   * @returns {boolean}
+   */
+  evaluateCondition(condition) {
+    if (!condition || !condition.type) return true;
+    switch (condition.type) {
+      case 'score_gte':
+        return GameEngine.state.score >= condition.value;
+      case 'score_lt':
+        return GameEngine.state.score < condition.value;
+      case 'card_unlocked':
+        return GameEngine.state.unlockedCards.includes(condition.cardId);
+      case 'choice_was_correct': {
+        const entries = Object.entries(GameEngine.state.choiceHistory);
+        const match = entries.find(([key]) => key.startsWith(`${condition.chapterId}_`));
+        return match ? match[1].isCorrect : false;
+      }
+      default:
+        console.warn('[Game] Unknown condition type:', condition.type);
+        return true;
+    }
+  },
+
   playDialogue(nodeId) {
     const node = this.currentScript?.[nodeId];
     if (!node) {
       console.error('[Game] Node not found:', nodeId);
       UI.showChapterComplete(GameState.currentChapterId);
       return;
+    }
+
+    // 条件节点：如果条件不满足，跳转到 fallbackNext
+    if (node.condition && !this.evaluateCondition(node.condition)) {
+      if (node.fallbackNext) {
+        this.playDialogue(node.fallbackNext);
+        return;
+      }
+      // 无 fallback 则继续显示当前节点
     }
 
     // 处理章节完成
@@ -256,7 +295,7 @@ const Game = {
   },
 
   advanceDialogue() {
-    if (this.isWaitingChoice) return;
+    if (this.isWaitingChoice || this._choicePending) return;
     if (TypeWriter.isTyping) {
       TypeWriter.skip();
       return;
@@ -267,18 +306,25 @@ const Game = {
     }
   },
 
+  _choicePending: false,
+
   makeChoice(choice, clickedBtn = null) {
+    if (this._choicePending) return;
+    this._choicePending = true;
     this.isWaitingChoice = false;
     const choicesContainer = document.getElementById('choices-container');
     const allButtons = choicesContainer.querySelectorAll('.choice-btn');
 
+    // 立即禁用所有选项按钮，防止重复点击
+    allButtons.forEach(btn => { btn.style.pointerEvents = 'none'; });
+
     if (choice.isCorrect !== undefined) {
       if (choice.isCorrect) {
         AudioManager.playCorrect();
-        if (clickedBtn) clickedBtn.classList.add('correct');
+        if (clickedBtn) clickedBtn.classList.add('correct-choice');
       } else {
         AudioManager.playWrong();
-        if (clickedBtn) clickedBtn.classList.add('wrong');
+        if (clickedBtn) clickedBtn.classList.add('wrong-choice');
         allButtons.forEach((btn, index) => {
           const currentNode = this.currentScript[GameEngine.state.currentDialogueId];
           if (currentNode.choices?.[index]?.isCorrect) {
@@ -295,10 +341,26 @@ const Game = {
 
     if (choice.score) {
       GameEngine.state.score += choice.score;
+      // 每章分数跟踪
+      const chId = GameState.currentChapterId;
+      GameEngine.state.chapterScores[chId] = (GameEngine.state.chapterScores[chId] || 0) + choice.score;
     }
 
+    // 选择历史记录
+    const historyKey = `${GameState.currentChapterId}_${GameEngine.state.currentDialogueId}`;
+    const currentNode = this.currentScript[GameEngine.state.currentDialogueId];
+    const choiceIndex = currentNode?.choices?.indexOf(choice) ?? -1;
+    GameEngine.state.choiceHistory[historyKey] = {
+      index: choiceIndex,
+      isCorrect: !!choice.isCorrect,
+      score: choice.score || 0
+    };
+
     const delay = choice.isCorrect !== undefined ? 1200 : 300;
-    setTimeout(() => this.playDialogue(choice.next), delay);
+    setTimeout(() => {
+      this._choicePending = false;
+      this.playDialogue(choice.next);
+    }, delay);
   },
 
   showFeedbackToast(message, isCorrect) {
@@ -411,7 +473,11 @@ window.Game = Game;
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[Game] v2.1 Initializing...');
+  console.log(`[Game] ${APP_VERSION} Initializing...`);
+
+  // 首页版本号
+  const versionTag = document.getElementById('version-tag');
+  if (versionTag) versionTag.textContent = APP_VERSION;
 
   // 初始化核心模块
   await StoryLoader.preloadAll();
@@ -422,5 +488,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   AudioManager.init();
   UI.init();
 
-  console.log('[Game] v2.1 Ready');
+  console.log(`[Game] ${APP_VERSION} Ready`);
 });

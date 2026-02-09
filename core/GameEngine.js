@@ -9,11 +9,15 @@ const GameEngine = {
         currentChapterId: 1,
         currentDialogueId: 'start',
         score: 0,
+        chapterScores: {},
+        choiceHistory: {},
         unlockedCards: [],
         completedChapters: [],
         playerName: '',
         gameStartTime: null,
-        completionTime: null
+        completionTime: null,
+        endingId: null,
+        saveVersion: 3
     },
 
     // 当前加载的脚本
@@ -81,11 +85,15 @@ const GameEngine = {
             currentChapterId: 1,
             currentDialogueId: 'start',
             score: 0,
+            chapterScores: {},
+            choiceHistory: {},
             unlockedCards: [],
             completedChapters: [],
             playerName: '',
             gameStartTime: null,
-            completionTime: null
+            completionTime: null,
+            endingId: null,
+            saveVersion: 3
         };
     },
 

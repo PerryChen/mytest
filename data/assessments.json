@@ -1,0 +1,112 @@
+{
+    "questions": [
+        {
+            "id": "q1",
+            "cardId": "MRD_PRD",
+            "question": "MRD（市场需求文档）主要解决什么问题？",
+            "options": ["产品怎么做出来", "为什么卖得出去", "如何降低成本", "售后怎么做"],
+            "correctIndex": 1,
+            "explanation": "MRD 解决'为什么卖得出去'，讲商业逻辑和市场机会。",
+            "difficulty": "basic"
+        },
+        {
+            "id": "q2",
+            "cardId": "MRD_PRD",
+            "question": "在产品开发中，需求阶段修改的成本与开模后修改相比如何？",
+            "options": ["差不多", "需求阶段更贵", "需求阶段便宜得多", "没有可比性"],
+            "correctIndex": 2,
+            "explanation": "需求阶段是成本最低的'后悔药'，开模后改一处可能几十万。",
+            "difficulty": "basic"
+        },
+        {
+            "id": "q3",
+            "cardId": "EVT_GOAL",
+            "question": "EVT（工程验证测试）的核心目标是什么？",
+            "options": ["看外观好不好看", "验证核心技术风险", "测量产量", "获取认证"],
+            "correctIndex": 1,
+            "explanation": "EVT 阶段核心是验证技术风险是否解除，发现 Bug 是功劳。",
+            "difficulty": "basic"
+        },
+        {
+            "id": "q4",
+            "cardId": "EVT_GOAL",
+            "question": "在 EVT 阶段发现了一个技术问题，正确做法是？",
+            "options": ["先隐瞒，私下解决", "如实上报评审会", "等 DVT 阶段再说", "忽略小问题"],
+            "correctIndex": 1,
+            "explanation": "EVT 严禁报喜不报忧，在此阶段发现问题是最佳时机。",
+            "difficulty": "basic"
+        },
+        {
+            "id": "q5",
+            "cardId": "DVT_TOOLING",
+            "question": "DVT 阶段的关键意义是什么？",
+            "options": ["只是走个流程", "最后一次低成本修改设计的机会", "开始量产", "做市场调研"],
+            "correctIndex": 1,
+            "explanation": "DVT 标志模具启动，是最后一次无需昂贵代价修改设计的窗口。",
+            "difficulty": "advanced"
+        },
+        {
+            "id": "q6",
+            "cardId": "PVT_RULES",
+            "question": "PVT 阶段的三大关注指标不包括哪个？",
+            "options": ["良率", "节拍", "一致性", "外观创新"],
+            "correctIndex": 3,
+            "explanation": "PVT 核心关注良率、节拍、一致性，严禁随意变更设计。",
+            "difficulty": "advanced"
+        },
+        {
+            "id": "q7",
+            "cardId": "PVT_RULES",
+            "question": "PVT 阶段发现需要换一颗螺丝，正确做法是？",
+            "options": ["立刻更换", "走工程变更流程", "等下次生产再改", "忽略"],
+            "correctIndex": 1,
+            "explanation": "PVT 阶段严禁随意变更，必须走正式的工程变更流程。",
+            "difficulty": "advanced"
+        },
+        {
+            "id": "q8",
+            "cardId": "MP_START",
+            "question": "MP（量产）开始意味着什么？",
+            "options": ["项目结束了", "产品交棒给市场和供应链团队", "可以休息了", "继续做研发"],
+            "correctIndex": 1,
+            "explanation": "MP 不是结束，而是产品交棒给市场、销售、供应链、服务团队的开始。",
+            "difficulty": "basic"
+        },
+        {
+            "id": "q9",
+            "cardId": "LOGISTICS",
+            "question": "跨境海运从出厂到海外仓大约需要多长时间？",
+            "options": ["3-5天", "10-15天", "25-45天", "90天以上"],
+            "correctIndex": 2,
+            "explanation": "从工厂出货到目的港清关送至海外仓，一般需要 25-45 天。",
+            "difficulty": "advanced"
+        },
+        {
+            "id": "q10",
+            "cardId": "DEALER_SUPPORT",
+            "question": "对经销商的支持不包括以下哪项？",
+            "options": ["产品培训", "展示物料", "售后支持", "帮经销商还贷款"],
+            "correctIndex": 3,
+            "explanation": "经销商支持包括培训、展示物料和售后支持，不涉及财务借贷。",
+            "difficulty": "basic"
+        },
+        {
+            "id": "q11",
+            "cardId": "USER_VALUE",
+            "question": "用户价值交付的关键环节不包括？",
+            "options": ["开箱便利性", "组装引导", "第一次骑行感受", "工厂良率数据"],
+            "correctIndex": 3,
+            "explanation": "用户价值体现在开箱、组装、首次骑行体验，工厂数据是内部指标。",
+            "difficulty": "basic"
+        },
+        {
+            "id": "q12",
+            "cardId": "LOGISTICS",
+            "question": "到港后的库存分配应该怎么做？",
+            "options": ["谁催得急给谁", "按上市计划分配", "全给官网", "全给经销商"],
+            "correctIndex": 1,
+            "explanation": "应严格按既定上市计划分配，避免渠道冲突。",
+            "difficulty": "advanced"
+        }
+    ]
+}

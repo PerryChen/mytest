@@ -58,9 +58,14 @@
                     <div class="header-actions">
                         <button id="add-node-btn" class="btn btn-secondary">➕ 添加节点</button>
                         <button id="chapter-settings-btn" class="btn btn-secondary">⚙️ 章节属性</button>
+                        <button id="validate-btn" class="btn btn-secondary">🔍 校验</button>
+                        <button id="preview-story-btn" class="btn btn-secondary">▶️ 预览</button>
+                        <button id="view-toggle-btn" class="btn btn-secondary" title="切换列表/图谱视图">🗺️ 图谱</button>
                         <button id="theme-toggle" class="btn btn-secondary" title="切换深色/浅色模式">🌓</button>
-                        <button id="save-story-btn" class="btn btn-primary">💾 保存当前脚本</button>
-                        <button id="export-story-btn" class="btn btn-secondary">📤 导出 JSON</button>
+                        <button id="save-story-btn" class="btn btn-primary">💾 保存</button>
+                        <button id="export-story-btn" class="btn btn-secondary">📤 导出</button>
+                        <button id="import-story-btn" class="btn btn-secondary">📥 导入</button>
+                        <input type="file" id="import-file-input" accept=".json" style="display:none">
                     </div>
                 </div>
                 <div class="story-editor-container">
@@ -298,6 +303,41 @@
                     <button id="add-chapter-btn" class="btn btn-secondary">➕ 添加章节</button>
                     <button id="save-chapters-btn" class="btn btn-primary">💾 保存章节</button>
                     <button id="reset-chapters-btn" class="btn btn-secondary">↩️ 恢复默认</button>
+                </div>
+            </div>
+
+            <!-- 对话预览弹窗 -->
+            <div class="story-preview-modal" id="story-preview-modal" style="display: none;">
+                <div class="story-preview-content">
+                    <div class="story-preview-header">
+                        <h3>▶️ 对话预览</h3>
+                        <button class="btn-close" id="close-preview-btn">×</button>
+                    </div>
+                    <div class="story-preview-scene">
+                        <div class="preview-speaker-area">
+                            <div class="preview-speaker-avatar" id="preview-avatar">👤</div>
+                            <div class="preview-speaker-name" id="preview-speaker">???</div>
+                        </div>
+                        <div class="preview-dialog-text" id="preview-text">对话内容</div>
+                        <div class="preview-node-id" id="preview-node-indicator">node: start</div>
+                        <div class="preview-choices-area" id="preview-choices">
+                            <!-- 动态生成 -->
+                        </div>
+                        <button class="btn btn-primary preview-next-btn" id="preview-next-btn">继续 →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 校验结果弹窗 -->
+            <div class="validate-modal" id="validate-modal" style="display: none;">
+                <div class="validate-content">
+                    <div class="validate-header">
+                        <h3>🔍 脚本校验结果</h3>
+                        <button class="btn-close" id="close-validate-btn">×</button>
+                    </div>
+                    <div class="validate-body" id="validate-body">
+                        <!-- 动态生成 -->
+                    </div>
                 </div>
             </div>
 

@@ -1,0 +1,45 @@
+{
+    "start": {
+        "speaker": "角色名",
+        "avatar": "👤",
+        "text": "开场对话内容",
+        "next": "question_1"
+    },
+    "question_1": {
+        "speaker": "主角",
+        "avatar": "🧑",
+        "text": "提问内容...",
+        "choices": [
+            {
+                "text": "错误选项",
+                "next": "wrong_answer",
+                "score": 0,
+                "isCorrect": false,
+                "feedback": "错误反馈"
+            },
+            {
+                "text": "正确选项",
+                "next": "correct_answer",
+                "score": 100,
+                "isCorrect": true,
+                "feedback": "正确反馈"
+            }
+        ]
+    },
+    "wrong_answer": {
+        "speaker": "角色名",
+        "avatar": "👤",
+        "text": "纠正内容",
+        "next": "correct_answer"
+    },
+    "correct_answer": {
+        "speaker": "主角",
+        "avatar": "🧑",
+        "text": "总结内容",
+        "unlockCard": "YOUR_CARD_ID",
+        "next": "end_chapter"
+    },
+    "end_chapter": {
+        "event": "chapter_complete"
+    }
+}
