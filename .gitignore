@@ -19,6 +19,7 @@ env/
 .vscode/
 .idea/
 .agent/
+config.js
 
 # 忽略文件夹及其下的所有内容
 doc/

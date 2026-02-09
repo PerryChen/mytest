@@ -8,8 +8,8 @@ const AnalyticsManager = {
     _config: {
         provider: 'supabase', // 'console' | 'supabase'
         debug: true,
-        supabaseUrl: 'https://mcaedkkskoycxbfsteij.supabase.co',
-        supabaseKey: 'sb_publishable_sYd2YoiqOs5ys_tjFqI46g_eHaVkNVI'
+        supabaseUrl: (typeof AppConfig !== 'undefined' && AppConfig.supabase?.url) || '',
+        supabaseKey: (typeof AppConfig !== 'undefined' && AppConfig.supabase?.anonKey) || ''
     },
 
     _supabase: null,

@@ -7,7 +7,7 @@
 // 🔐 密码验证
 // ==========================================
 
-const ADMIN_PASSWORD = 'velotric';
+const ADMIN_PASSWORD = (typeof AppConfig !== 'undefined' && AppConfig.admin?.password) || 'velotric';
 
 const Auth = {
     isAuthenticated: false,
