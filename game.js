@@ -207,6 +207,26 @@ const UI = {
       document.getElementById('map-modal').style.display = 'none';
     });
 
+    // 海报生成按钮
+    const generatePosterBtn = document.getElementById('generate-poster-btn');
+    if (generatePosterBtn) {
+      generatePosterBtn.addEventListener('click', () => this.showPosterModal());
+    }
+    const closePosterBtn = document.getElementById('close-poster-btn');
+    if (closePosterBtn) {
+      closePosterBtn.addEventListener('click', () => {
+        document.getElementById('poster-modal').style.display = 'none';
+      });
+    }
+    const downloadPosterBtn = document.getElementById('download-poster-btn');
+    if (downloadPosterBtn) {
+      downloadPosterBtn.addEventListener('click', () => this.downloadPoster());
+    }
+    const copyPosterBtn = document.getElementById('copy-poster-btn');
+    if (copyPosterBtn) {
+      copyPosterBtn.addEventListener('click', () => this.copyPosterToClipboard());
+    }
+
     if (GameState.hasCompleted) {
       document.getElementById('chapter-select-btn').style.display = 'flex';
     }
@@ -402,6 +422,72 @@ const UI = {
       console.error('证书生成失败:', err);
       btnContainer.style.display = originalDisplay;
     });
+  },
+
+  // 显示海报弹窗
+  showPosterModal() {
+    const modal = document.getElementById('poster-modal');
+    if (!modal) return;
+
+    // 填充海报数据
+    const playerName = GameEngine.state.playerName || '勇敢的探索者';
+    document.getElementById('poster-player-name').textContent = playerName;
+    document.getElementById('poster-score').textContent = GameState.score;
+    document.getElementById('poster-cards').textContent = GameState.unlockedCards.length;
+    document.getElementById('poster-chapters').textContent = GameState.completedChapters.length || 8;
+    document.getElementById('poster-date').textContent = new Date().toLocaleDateString('zh-CN');
+
+    modal.style.display = 'flex';
+  },
+
+  // 下载海报图片
+  downloadPoster() {
+    const posterCard = document.getElementById('poster-card');
+    if (!posterCard) return;
+
+    html2canvas(posterCard, {
+      backgroundColor: null,
+      scale: 2,
+      useCORS: true
+
+    }).then(canvas => {
+      const link = document.createElement('a');
+      link.download = `Velotric_Poster_${new Date().getTime()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }).catch(err => {
+      console.error('海报生成失败:', err);
+      alert('海报生成失败，请重试');
+    });
+  },
+
+  // 复制海报到剪贴板
+  async copyPosterToClipboard() {
+    const posterCard = document.getElementById('poster-card');
+    if (!posterCard) return;
+
+    try {
+      const canvas = await html2canvas(posterCard, {
+        backgroundColor: null,
+        scale: 2,
+        useCORS: true
+      });
+
+      canvas.toBlob(async (blob) => {
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ]);
+          alert('✅ 海报已复制到剪贴板！');
+        } catch (e) {
+          console.error('复制失败:', e);
+          alert('❌ 复制失败，请使用保存图片功能');
+        }
+      }, 'image/png');
+    } catch (err) {
+      console.error('海报生成失败:', err);
+      alert('海报生成失败，请重试');
+    }
   },
 
   async showChapterSelector() {
