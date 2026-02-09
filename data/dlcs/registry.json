@@ -9,6 +9,17 @@
             "cards": 2,
             "icon": "🚀",
             "department": "marketing",
+            "status": "coming_soon"
+        },
+        {
+            "id": "hr_onboarding",
+            "name": "新人培训：公司定位与价值观",
+            "description": "了解 Velotric 全球化品牌定位、核心业务模式、企业文化价值观及个人成长路径",
+            "version": "2.0.0",
+            "chapters": 6,
+            "cards": 8,
+            "icon": "🎓",
+            "department": "hr",
             "status": "available"
         }
     ]

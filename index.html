@@ -36,6 +36,15 @@
           <div class="journey-node">🚲<span>骑行</span></div>
         </div>
 
+        <!-- 公告面板 -->
+        <div id="announcement-panel" class="announcement-panel" style="display: none;">
+          <div class="announcement-header">
+            <span class="announcement-icon">📢</span>
+            <span class="announcement-label">公告</span>
+          </div>
+          <div class="announcement-scroll-container" id="announcement-scroll"></div>
+        </div>
+
         <div class="intro-actions">
           <button id="new-game-btn" class="btn btn-primary btn-large">
             <span>▶</span> 开始新游戏
@@ -51,6 +60,9 @@
           </button>
           <button id="assessment-btn" class="btn btn-secondary">
             <span>📝</span> 知识测评
+          </button>
+          <button id="stats-btn" class="btn btn-secondary" style="display: none;">
+            <span>📊</span> 游戏档案
           </button>
           <a href="admin.html" class="btn btn-ghost" id="admin-link">
             <span>⚙️</span> 配置管理
@@ -426,6 +438,7 @@
   <script src="core/DLCLoader.js"></script>
   <script src="core/EndingsManager.js"></script>
   <script src="core/AssessmentEngine.js"></script>
+  <script src="core/AnnouncementManager.js"></script>
   <script src="admin_theme.js"></script>
   <!-- Main Game -->
   <script src="game.js"></script>

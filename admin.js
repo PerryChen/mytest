@@ -153,7 +153,12 @@ const AdminUI = {
 
         // 标签页切换
         document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
+            btn.addEventListener('click', () => {
+                this.switchTab(btn.dataset.tab);
+                if (btn.dataset.tab === 'announcements' && typeof AdminAnnouncements !== 'undefined') {
+                    AdminAnnouncements.init();
+                }
+            });
         });
 
 

@@ -1179,3 +1179,151 @@
 .btn-danger:hover {
     background: hsl(0, 70%, 45%);
 }
+
+/* ===== 公告管理面板 ===== */
+.ann-container {
+    display: flex;
+    height: calc(100vh - 200px);
+    min-height: 400px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    overflow: hidden;
+}
+
+.ann-list {
+    width: 300px;
+    border-right: 1px solid var(--border-subtle);
+    overflow-y: auto;
+    padding: 10px;
+    background: var(--bg-elevated);
+}
+
+.ann-list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    color: var(--text-primary);
+}
+
+.ann-list-item:hover {
+    border-color: var(--primary-light);
+}
+
+.ann-list-item.active {
+    border-color: var(--primary);
+    background: hsla(210, 100%, 50%, 0.1);
+}
+
+.ann-list-item.inactive {
+    opacity: 0.5;
+}
+
+.ann-list-item-status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    margin-top: 6px;
+    flex-shrink: 0;
+}
+
+.ann-list-item-status.off {
+    background: var(--text-muted);
+}
+
+.ann-list-item-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.ann-list-item-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ann-list-item-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.ann-editor {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.ann-editor-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-elevated);
+}
+
+.ann-editor-toolbar h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.ann-editor-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.ann-editor-body {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.ann-editor textarea {
+    font-family: inherit;
+    resize: vertical;
+}
+
+.ann-editor-row {
+    display: flex;
+    gap: 16px;
+}
+
+.ann-preview-box {
+    margin-top: 16px;
+    padding: 16px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+}
+
+.ann-preview-box h4 {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.ann-preview-content {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+.ann-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}

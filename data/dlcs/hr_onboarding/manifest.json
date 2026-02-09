@@ -1,0 +1,129 @@
+{
+    "id": "hr_onboarding",
+    "name": "新人培训：公司定位与价值观",
+    "version": "2.0.0",
+    "chapters": [
+        {
+            "id": 1,
+            "title": "午餐桌上的争论（上）",
+            "location": "深圳办公室·餐厅",
+            "sceneClass": "scene-cafeteria",
+            "scriptFile": "hr_chapter_1.json"
+        },
+        {
+            "id": 2,
+            "title": "午餐桌上的争论（下）",
+            "location": "深圳办公室·餐厅",
+            "sceneClass": "scene-cafeteria",
+            "scriptFile": "hr_chapter_2.json"
+        },
+        {
+            "id": 3,
+            "title": "真实案例挑战赛（上）",
+            "location": "深圳办公室·培训教室",
+            "sceneClass": "scene-training",
+            "scriptFile": "hr_chapter_3.json"
+        },
+        {
+            "id": 4,
+            "title": "真实案例挑战赛（下）",
+            "location": "深圳办公室·培训教室",
+            "sceneClass": "scene-training",
+            "scriptFile": "hr_chapter_4.json"
+        },
+        {
+            "id": 5,
+            "title": "小唯的入职日记（上）",
+            "location": "深圳办公室·大厅",
+            "sceneClass": "scene-lobby",
+            "scriptFile": "hr_chapter_5.json"
+        },
+        {
+            "id": 6,
+            "title": "小唯的入职日记（下）",
+            "location": "深圳办公室·HR办公室",
+            "sceneClass": "scene-hr-office",
+            "scriptFile": "hr_chapter_6.json"
+        }
+    ],
+    "knowledgeCards": {
+        "GLOBAL_BRAND": {
+            "title": "全球化品牌定位",
+            "content": "Velotric 是办公室在中国的全球化品牌，非出海企业。供应链在昆山，品牌在深圳，销售用美国本土团队，客服在菲律宾自建。哪里效率最高，资源就放哪里。目标市场：美国 8000 万中老年中产家庭，目标份额 20%（约 160 万台）。",
+            "category": "hr",
+            "tier": "basic",
+            "relatedCards": [
+                "PRODUCT_DRIVEN",
+                "IBD_CHANNEL"
+            ]
+        },
+        "PRODUCT_DRIVEN": {
+            "title": "产品驱动增长",
+            "content": "Velotric 不打价格战，靠产品驱动增长。自研核心部件降本 30%，退货率仅 1%。7 个 SKU 中 4 个成为亿元级单品（Discover 1、Discover 2、Thunder 1、Nomad 1）。通过深度用户洞察打造差异化产品，如 Discover 3 在舒适性和轻量化上的创新。",
+            "category": "hr",
+            "tier": "basic",
+            "relatedCards": [
+                "GLOBAL_BRAND",
+                "IBD_CHANNEL"
+            ]
+        },
+        "IBD_CHANNEL": {
+            "title": "IBD 渠道战略",
+            "content": "IBD（Independent Bicycle Dealer）社区自行车店是 Velotric 的核心渠道。电动自行车是大件商品，用户需要试骑和售后服务，IBD 扎根社区建立信任关系。目前 1200 家经销商，目标扩展至 2500 家。DTC 官网为辅，线下 IBD 为主。",
+            "category": "hr",
+            "tier": "advanced",
+            "relatedCards": [
+                "PRODUCT_DRIVEN",
+                "GLOBAL_BRAND"
+            ]
+        },
+        "VALUES_DRIVE": {
+            "title": "进取与长期主义",
+            "content": "进取：给自己设高目标，拆解执行。Andrew 三个月开拓 100 家经销商；物流团队两年将履约缩短至 4 天；客户咨询 1 分钟内响应。长期主义：通过深度用户洞察打造差异化壁垒，坚决不做同质化产品。",
+            "category": "hr",
+            "tier": "basic",
+            "relatedCards": [
+                "VALUES_AGILE",
+                "VALUES_B2B"
+            ]
+        },
+        "VALUES_AGILE": {
+            "title": "敏捷与卓越",
+            "content": "敏捷：接受大部分决策可能错误，先行动再迭代。直营店不可行后迅速转向经销商渠道。卓越：挑战不可能的任务。Sensor Swap 一个月开发上线，成立三年一次性通过高新企业认证，自建菲律宾客服团队。",
+            "category": "hr",
+            "tier": "advanced",
+            "relatedCards": [
+                "VALUES_DRIVE",
+                "VALUES_B2B"
+            ]
+        },
+        "VALUES_B2B": {
+            "title": "背靠背协作",
+            "content": "打破部门墙，以用户价值为导向协作。遇到跨部门问题不发邮件排会议，飞书群 5 分钟拉通销售、工程师、品质团队。通过用户访谈和跨部门工作坊改变甩锅文化，不让用户利益受损。",
+            "category": "hr",
+            "tier": "basic",
+            "relatedCards": [
+                "VALUES_DRIVE",
+                "VALUES_AGILE"
+            ]
+        },
+        "ONBOARDING_DAY1": {
+            "title": "入职首日体验",
+            "content": "入职前：欢迎邮件 + 入职搭子指派。首日流程：Betty 全程陪同 → 搭子学姐带路 → 办公室导览 → 团队欢迎午餐 → 产品试骑和组装体验 → 时间胶囊仪式（写下初心和半年目标，转正时打开）。",
+            "category": "hr",
+            "tier": "basic",
+            "relatedCards": [
+                "GROWTH_PATH"
+            ]
+        },
+        "GROWTH_PATH": {
+            "title": "成长五阶段",
+            "content": "入职前：欢迎邮件 + 搭子指派。首日：导览、午餐、试骑、时间胶囊。首周：部门培训、搭子跟进、HR 一对一反馈。首月：新人培训、圆桌会（跨部门深度交流）。3-6 月：3 个月 Review（全面评估 + 设定发展目标），6 个月转正答辩。",
+            "category": "hr",
+            "tier": "advanced",
+            "relatedCards": [
+                "ONBOARDING_DAY1"
+            ]
+        }
+    }
+}

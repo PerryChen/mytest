@@ -88,8 +88,20 @@ const UIManager = {
         document.getElementById('new-game-btn').addEventListener('click', () => Game.startNewGame());
         document.getElementById('continue-game-btn').addEventListener('click', () => Game.continueGame());
         document.querySelector('.dialog-box').addEventListener('click', () => Game.advanceDialogue());
-        document.getElementById('next-chapter-btn').addEventListener('click', () => Game.startChapter(GameState.currentChapterId + 1));
-        document.getElementById('review-chapter-btn').addEventListener('click', () => Game.reviewCurrentChapter());
+        document.getElementById('next-chapter-btn').addEventListener('click', () => {
+            if (Game.currentDLC) {
+                Game.playDLCChapter(Game.dlcChapterIndex + 1);
+            } else {
+                Game.startChapter(GameState.currentChapterId + 1);
+            }
+        });
+        document.getElementById('review-chapter-btn').addEventListener('click', () => {
+            if (Game.currentDLC) {
+                Game.playDLCChapter(Game.dlcChapterIndex);
+            } else {
+                Game.reviewCurrentChapter();
+            }
+        });
 
         this.popup.closeBtn.addEventListener('click', () => {
             this.popup.container.style.display = 'none';
@@ -103,7 +115,14 @@ const UIManager = {
             }
         });
 
-        document.getElementById('play-again-btn').addEventListener('click', () => Game.startNewGame());
+        document.getElementById('play-again-btn').addEventListener('click', () => {
+            if (this._isDLCEnding) {
+                this._isDLCEnding = false;
+                this.switchScreen('intro');
+            } else {
+                Game.startNewGame();
+            }
+        });
         document.getElementById('view-cards-btn').addEventListener('click', () => Game.showCardsScreen());
         document.getElementById('cards-back-btn').addEventListener('click', () => Game.goBackToEndingOrMenu());
 
@@ -130,6 +149,9 @@ const UIManager = {
 
         // DLC 按钮 → 打开选择器
         document.getElementById('dlc-demo-btn').addEventListener('click', () => this.showDLCSelector());
+
+        // 游戏档案按钮
+        document.getElementById('stats-btn').addEventListener('click', () => this.showPlayerStats());
 
         // 测评按钮
         document.getElementById('assessment-btn').addEventListener('click', () => this.showAssessmentSetup());
@@ -192,6 +214,11 @@ const UIManager = {
             document.getElementById('chapter-select-btn').style.display = 'flex';
         }
 
+        // Show stats button if there's any play data
+        if (localStorage.getItem('velotric_save_v2') || localStorage.getItem('velotric_dlc_history')) {
+            document.getElementById('stats-btn').style.display = 'flex';
+        }
+
         console.log('[UIManager] Ready');
     },
 
@@ -217,7 +244,8 @@ const UIManager = {
             this.gameHeader.date.classList.add('date-change');
         }
 
-        const totalChapters = StoryLoader.cache.chapters?.chapters?.length || 8;
+        const isDLC = !!Game.currentDLC;
+        const totalChapters = isDLC ? Game.currentDLC.chapters.length : (StoryLoader.cache.chapters?.chapters?.length || 8);
         const progress = (chapter.id / totalChapters) * 100;
         document.getElementById('progress-text').textContent = `${chapter.id} / ${totalChapters}`;
         document.getElementById('progress-fill').style.width = `${progress}%`;
@@ -358,13 +386,182 @@ const UIManager = {
         }
     },
 
+    showDLCChapterComplete(dlcManifest, chapterIndex) {
+        this.switchScreen('complete');
+        AudioManager.playComplete();
+        const chapter = dlcManifest.chapters[chapterIndex];
+        document.getElementById('complete-chapter-name').textContent = `第${chapter.id}章：${chapter.title}`;
+        document.getElementById('chapter-score').textContent = GameState.score;
+        // Count questions answered in current chapter from choice history
+        const dlcChapterId = `dlc_${dlcManifest.id}_${chapter.id}`;
+        const decisions = Object.keys(GameEngine.state.choiceHistory).filter(k => k.startsWith(dlcChapterId + '_')).length;
+        document.getElementById('decisions-count').textContent = decisions || '1';
+        // Render cards from current script (already loaded)
+        this._renderDLCChapterCards();
+    },
+
+    _renderDLCChapterCards() {
+        const cardsContainer = document.getElementById('cards-earned');
+        cardsContainer.innerHTML = '';
+        const script = GameEngine.currentScript;
+        if (!script) return;
+        const cardsInChapter = new Set();
+        Object.values(script).forEach(node => {
+            if (node.unlockCard) cardsInChapter.add(node.unlockCard);
+        });
+        cardsInChapter.forEach(cardId => {
+            const card = StoryLoader.getKnowledgeCard(cardId);
+            if (card) {
+                const el = document.createElement('div');
+                el.className = 'mini-card';
+                el.textContent = `💡 ${card.title}`;
+                cardsContainer.appendChild(el);
+            }
+        });
+    },
+
+    _isDLCEnding: false,
+
+    showDLCEnding(dlcManifest, dlcScore) {
+        this._isDLCEnding = true;
+        this.switchScreen('ending');
+        AudioManager.playEnding();
+
+        // DLC-specific content
+        document.querySelector('.ending-title').textContent = '恭喜通关！';
+        document.querySelector('.ending-subtitle').textContent = dlcManifest.name;
+        const journeyEl = document.querySelector('.journey-complete');
+        if (journeyEl) {
+            journeyEl.innerHTML = `<p>你已完成「${dlcManifest.name}」全部 ${dlcManifest.chapters.length} 个章节</p>`;
+        }
+        const animEl = document.querySelector('.ending-animation');
+        if (animEl) animEl.innerHTML = '<span>🎊</span><span>🎓</span><span>🎊</span>';
+
+        // Stats (use DLC-specific score)
+        const score = dlcScore !== undefined ? dlcScore : 0;
+        document.getElementById('total-chapters').textContent = dlcManifest.chapters.length;
+        const dlcCardIds = dlcManifest.knowledgeCards ? Object.keys(dlcManifest.knowledgeCards) : [];
+        const unlockedDLCCards = dlcCardIds.filter(id => GameState.unlockedCards.includes(id));
+        document.getElementById('total-cards').textContent = `${unlockedDLCCards.length}/${dlcCardIds.length}`;
+        document.getElementById('total-score').textContent = score;
+
+        // DLC achievements
+        this._showDLCAchievements(dlcManifest, unlockedDLCCards.length, dlcCardIds.length, score);
+
+        // Hide main-game-specific sections
+        const nameSection = document.getElementById('name-input-section');
+        if (nameSection) nameSection.style.display = 'none';
+        const certSection = document.getElementById('certificate');
+        if (certSection) certSection.style.display = 'none';
+        const posterBtn = document.getElementById('generate-poster-btn');
+        if (posterBtn) posterBtn.style.display = 'none';
+
+        // Change button text
+        const playAgainBtn = document.getElementById('play-again-btn');
+        if (playAgainBtn) playAgainBtn.textContent = '返回主菜单';
+
+        // Set ending theme
+        const endingScreen = document.getElementById('ending-screen');
+        endingScreen.classList.remove('ending-basic', 'ending-good', 'ending-perfect');
+    },
+
+    /**
+     * 计算 DLC 成就列表
+     * @returns {Array<{icon, name, desc}>}
+     */
+    _computeDLCAchievements(dlcManifest, unlockedCount, totalCount, dlcScore) {
+        const achievements = [];
+
+        if (dlcManifest.id === 'hr_onboarding') {
+            // --- HR DLC 专属成就 ---
+            const cs = GameEngine.state.chapterScores || {};
+            const prefix = `dlc_${dlcManifest.id}_`;
+            const ch = (n) => cs[`${prefix}${n}`] || 0;
+
+            // 培训之星：满分 1600
+            if (dlcScore >= 1600) {
+                achievements.push({ icon: '🏆', name: '培训之星', desc: '答对全部 16 道题目' });
+            }
+            // 知识达人：8/8 卡片
+            if (unlockedCount >= totalCount && totalCount > 0) {
+                achievements.push({ icon: '📚', name: '知识达人', desc: '收集全部 8 张知识卡' });
+            }
+            // 品牌大使：Ch1+Ch2 满分 500
+            if (ch(1) + ch(2) >= 500) {
+                achievements.push({ icon: '🌍', name: '品牌大使', desc: '完全理解公司定位与商业模式' });
+            }
+            // 价值观标兵：Ch3+Ch4 满分 600
+            if (ch(3) + ch(4) >= 600) {
+                achievements.push({ icon: '💪', name: '价值观标兵', desc: '深刻领悟五大价值观精髓' });
+            }
+            // 入职达人：Ch5+Ch6 满分 500
+            if (ch(5) + ch(6) >= 500) {
+                achievements.push({ icon: '🤝', name: '入职达人', desc: '掌握 Velotric 入职全流程' });
+            }
+            // 彩蛋猎人：触发 ≥4/5 个隐藏剧情（bonus_check score_gte）
+            let bonusCount = 0;
+            if (ch(1) >= 200) bonusCount++;  // Ch1: score_gte 200
+            if (ch(3) >= 200) bonusCount++;  // Ch3: score_gte 200
+            if (ch(4) >= 200) bonusCount++;  // Ch4: score_gte 200
+            if (ch(5) >= 150) bonusCount++;  // Ch5: score_gte 150
+            if (ch(6) >= 150) bonusCount++;  // Ch6: score_gte 150
+            if (bonusCount >= 4) {
+                achievements.push({ icon: '🎯', name: '彩蛋猎人', desc: '发现大部分隐藏的深度内容' });
+            }
+        } else {
+            // --- 通用 DLC 成就（兜底） ---
+            if (unlockedCount >= totalCount && totalCount > 0) {
+                achievements.push({ icon: '📚', name: '知识收藏家', desc: '解锁全部知识卡' });
+            }
+            const totalPossibleScore = dlcManifest.chapters.length * 200;
+            if (dlcScore >= totalPossibleScore) {
+                achievements.push({ icon: '🏆', name: '完美决策者', desc: '答对率极高' });
+            }
+        }
+
+        return achievements;
+    },
+
+    _showDLCAchievements(dlcManifest, unlockedCount, totalCount, dlcScore) {
+        const achievements = this._computeDLCAchievements(dlcManifest, unlockedCount, totalCount, dlcScore);
+
+        const container = document.getElementById('achievements-list');
+        const section = document.getElementById('achievements-section');
+        if (container) {
+            container.innerHTML = '';
+            if (achievements.length > 0) {
+                if (section) section.style.display = 'block';
+                achievements.forEach(ach => {
+                    const el = document.createElement('div');
+                    el.className = 'achievement-item';
+                    el.innerHTML = `<span class="achievement-icon">${ach.icon}</span><div><div class="achievement-name">${ach.name}</div><div class="achievement-desc">${ach.desc}</div></div>`;
+                    container.appendChild(el);
+                });
+            } else {
+                if (section) section.style.display = 'block';
+                container.innerHTML = '<div class="achievement-item"><span class="achievement-icon">🎓</span><div><div class="achievement-name">培训完成</div><div class="achievement-desc">完成全部章节学习</div></div></div>';
+            }
+        }
+    },
+
     // ===== 结局画面 =====
 
     async showEnding() {
+        this._isDLCEnding = false;
         this.switchScreen('ending');
         AudioManager.playEnding();
+        // Restore main-game sections that DLC ending may have hidden
+        const nameSection = document.getElementById('name-input-section');
+        if (nameSection) nameSection.style.display = '';
+        const certSection = document.getElementById('certificate');
+        if (certSection) certSection.style.display = 'none'; // cert shown after name input
+        const posterBtn = document.getElementById('generate-poster-btn');
+        if (posterBtn) posterBtn.style.display = '';
+        const playAgainBtn = document.getElementById('play-again-btn');
+        if (playAgainBtn) playAgainBtn.textContent = '再玩一次';
         document.getElementById('total-score').textContent = GameState.score;
         document.getElementById('total-cards').textContent = GameState.unlockedCards.length;
+        document.getElementById('total-chapters').textContent = '8';
 
         if (GameState.gameStartTime) {
             GameState.completionTime = Date.now() - GameState.gameStartTime;
@@ -579,10 +776,11 @@ const UIManager = {
         const grid = document.getElementById('cards-grid');
         grid.innerHTML = '';
 
-        const allCards = StoryLoader.cache.knowledgeCards || {};
+        const allCards = StoryLoader.getAllCards();
         const categoryNames = {
             all: '全部', product: '产品', engineering: '工程',
-            manufacturing: '制造', logistics: '物流', sales: '销售', marketing: '营销'
+            manufacturing: '制造', logistics: '物流', sales: '销售', marketing: '营销',
+            hr: '人力资源'
         };
         const tierLabels = { basic: '基础', advanced: '进阶', expert: '专家' };
         const tierColors = { basic: '#4CAF50', advanced: '#2196F3', expert: '#FF9800' };
@@ -641,7 +839,7 @@ const UIManager = {
         const tierLabels = { basic: '基础', advanced: '进阶', expert: '专家' };
         const categoryNames = {
             product: '产品', engineering: '工程', manufacturing: '制造',
-            logistics: '物流', sales: '销售', marketing: '营销'
+            logistics: '物流', sales: '销售', marketing: '营销', hr: '人力资源'
         };
 
         let modal = document.getElementById('card-detail-modal');
@@ -679,7 +877,13 @@ const UIManager = {
     },
 
     goBackToEndingOrMenu() {
-        this.switchScreen('ending');
+        if (this._isDLCEnding) {
+            this.switchScreen('ending');
+        } else if (GameState.completedChapters.length >= 8) {
+            this.switchScreen('ending');
+        } else {
+            this.switchScreen('intro');
+        }
     },
 
     // ===== 知识测评 =====
@@ -860,7 +1064,12 @@ const UIManager = {
 
         const registry = await DLCLoader.loadRegistry();
         const dlcListHtml = registry.map(dlc => {
-            const progress = localStorage.getItem(`velotric_dlc_${dlc.id}_complete`) ? 'completed' : 'available';
+            const isComingSoon = dlc.status === 'coming_soon';
+            const isCompleted = localStorage.getItem(`velotric_dlc_${dlc.id}_complete`);
+            let statusClass, statusText;
+            if (isComingSoon) { statusClass = 'coming_soon'; statusText = '开发中'; }
+            else if (isCompleted) { statusClass = 'completed'; statusText = '已完成'; }
+            else { statusClass = 'available'; statusText = '开始'; }
             return `
                 <div class="dlc-item" data-dlc-id="${dlc.id}">
                     <div class="dlc-item-icon">${dlc.icon || '📦'}</div>
@@ -869,7 +1078,7 @@ const UIManager = {
                         <div class="dlc-item-desc">${dlc.description || ''}</div>
                         <div class="dlc-item-meta">${dlc.chapters} 章节 · ${dlc.cards} 知识卡</div>
                     </div>
-                    <span class="dlc-status ${progress}">${progress === 'completed' ? '已完成' : '开始'}</span>
+                    <span class="dlc-status ${statusClass}">${statusText}</span>
                 </div>
             `;
         }).join('');
@@ -887,10 +1096,169 @@ const UIManager = {
 
         modal.querySelectorAll('.dlc-item').forEach(item => {
             item.addEventListener('click', () => {
+                const dlcId = item.dataset.dlcId;
+                const dlcInfo = registry.find(d => d.id === dlcId);
+                if (dlcInfo && dlcInfo.status === 'coming_soon') {
+                    const toast = document.createElement('div');
+                    toast.className = 'dlc-toast';
+                    toast.textContent = '🚧 敬请期待，正在开发中…';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 2200);
+                    return;
+                }
                 modal.style.display = 'none';
-                Game.startDLC(item.dataset.dlcId);
+                Game.startDLC(dlcId);
             });
         });
+    },
+
+    // ===== 游戏档案 =====
+
+    showPlayerStats() {
+        let modal = document.getElementById('stats-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'stats-modal';
+            modal.className = 'card-detail-modal';
+            document.body.appendChild(modal);
+        }
+
+        const mainStatsHtml = this._buildMainGameStats();
+        const dlcStatsHtml = this._buildDLCStats();
+
+        modal.innerHTML = `
+            <div class="card-detail-content stats-content">
+                <button class="btn-close card-detail-close">&times;</button>
+                <h3 class="stats-title">📊 游戏档案</h3>
+                <div class="stats-section">
+                    <div class="stats-section-header">
+                        <span class="stats-section-icon">📖</span>
+                        <span class="stats-section-title">主线剧情</span>
+                    </div>
+                    ${mainStatsHtml}
+                </div>
+                ${dlcStatsHtml}
+            </div>
+        `;
+
+        modal.style.display = 'flex';
+        modal.querySelector('.card-detail-close').onclick = () => modal.style.display = 'none';
+        modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+    },
+
+    _buildMainGameStats() {
+        const hasSave = localStorage.getItem('velotric_save_v2');
+        if (!hasSave) {
+            return '<p class="stats-empty">尚未开始主线剧情</p>';
+        }
+
+        const state = GameEngine.state;
+        const chaptersCompleted = state.completedChapters.filter(id => typeof id === 'number').length;
+        const totalChapters = StoryLoader.cache.chapters?.chapters?.length || 8;
+        const score = state.score;
+        const cardsCount = state.unlockedCards.length;
+
+        // Ending
+        let endingText = '未通关';
+        if (state.endingId) {
+            const endingNames = { basic: '初出茅庐', good: '出色表现', perfect: '完美通关' };
+            endingText = endingNames[state.endingId] || state.endingId;
+        }
+
+        // Achievements (same logic as checkAndShowAchievements)
+        const achievements = [];
+        if (score >= 800) achievements.push({ icon: '🏆', name: '完美决策者' });
+        if (cardsCount >= 8) achievements.push({ icon: '📚', name: '知识收藏家' });
+        if (state.completionTime && state.completionTime < 600000) {
+            achievements.push({ icon: '⚡', name: '速通达人' });
+        }
+
+        const achievementsHtml = achievements.length > 0
+            ? achievements.map(a => `<span class="stats-badge">${a.icon} ${a.name}</span>`).join('')
+            : '<span class="stats-no-data">暂无成就</span>';
+
+        return `
+            <div class="stats-grid">
+                <div class="stats-stat">
+                    <span class="stats-stat-value">${chaptersCompleted}/${totalChapters}</span>
+                    <span class="stats-stat-label">完成章节</span>
+                </div>
+                <div class="stats-stat">
+                    <span class="stats-stat-value">${score}</span>
+                    <span class="stats-stat-label">总分</span>
+                </div>
+                <div class="stats-stat">
+                    <span class="stats-stat-value">${cardsCount}</span>
+                    <span class="stats-stat-label">知识卡</span>
+                </div>
+                <div class="stats-stat">
+                    <span class="stats-stat-value">${endingText}</span>
+                    <span class="stats-stat-label">结局</span>
+                </div>
+            </div>
+            <div class="stats-achievements">${achievementsHtml}</div>
+        `;
+    },
+
+    _buildDLCStats() {
+        let history = {};
+        try {
+            const raw = localStorage.getItem('velotric_dlc_history');
+            if (raw) history = JSON.parse(raw);
+        } catch (e) { /* ignore */ }
+
+        const dlcIds = Object.keys(history);
+        if (dlcIds.length === 0) return '';
+
+        const dlcItemsHtml = dlcIds.map(id => {
+            const record = history[id];
+            const date = new Date(record.completedAt);
+            const dateStr = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+            const unlockedCount = Array.isArray(record.unlockedCards) ? record.unlockedCards.length : 0;
+
+            // Render persisted achievements
+            const achList = Array.isArray(record.achievements) ? record.achievements : [];
+            const achHtml = achList.length > 0
+                ? `<div class="stats-achievements">${achList.map(name => `<span class="stats-badge">${name}</span>`).join('')}</div>`
+                : '';
+
+            return `
+                <div class="stats-dlc-item">
+                    <div class="stats-dlc-header">
+                        <span class="stats-dlc-icon">${record.dlcIcon || '📦'}</span>
+                        <div class="stats-dlc-info">
+                            <div class="stats-dlc-name">${record.dlcName}</div>
+                            <div class="stats-dlc-date">完成于 ${dateStr}</div>
+                        </div>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stats-stat">
+                            <span class="stats-stat-value">${record.chaptersCompleted}/${record.chaptersTotal}</span>
+                            <span class="stats-stat-label">章节</span>
+                        </div>
+                        <div class="stats-stat">
+                            <span class="stats-stat-value">${record.score}</span>
+                            <span class="stats-stat-label">得分</span>
+                        </div>
+                        <div class="stats-stat">
+                            <span class="stats-stat-value">${unlockedCount}/${record.totalCards}</span>
+                            <span class="stats-stat-label">知识卡</span>
+                        </div>
+                    </div>
+                    ${achHtml}
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="stats-section stats-section-dlc">
+                <div class="stats-section-header">
+                    <span class="stats-section-icon">📦</span>
+                    <span class="stats-section-title">DLC 扩展剧情</span>
+                </div>
+                ${dlcItemsHtml}
+            </div>
+        `;
     },
 
     // ===== 地图 =====
@@ -901,14 +1269,32 @@ const UIManager = {
         if (!modal || !container) return;
 
         container.innerHTML = '';
-        const chaptersData = StoryLoader.cache.chapters || await StoryLoader.loadChapters();
-        const currentId = GameState.currentChapterId;
-        const completedIds = GameState.completedChapters;
 
-        chaptersData.chapters.forEach((chapter) => {
-            const isUnlocked = chapter.id <= currentId || completedIds.includes(chapter.id);
-            const isCompleted = completedIds.includes(chapter.id) || chapter.id < currentId;
-            const isCurrent = chapter.id === currentId;
+        // DLC 模式：显示 DLC 章节；主线模式：显示主线章节
+        const isDLC = !!Game.currentDLC;
+        let chapters;
+        let currentIndex;
+        if (isDLC) {
+            chapters = Game.currentDLC.chapters;
+            currentIndex = Game.dlcChapterIndex;
+        } else {
+            const chaptersData = StoryLoader.cache.chapters || await StoryLoader.loadChapters();
+            chapters = chaptersData.chapters;
+        }
+        const currentId = isDLC ? null : GameState.currentChapterId;
+        const completedIds = isDLC ? [] : GameState.completedChapters;
+
+        chapters.forEach((chapter, idx) => {
+            let isCompleted, isCurrent, isUnlocked;
+            if (isDLC) {
+                isCurrent = idx === currentIndex;
+                isCompleted = idx < currentIndex;
+                isUnlocked = idx <= currentIndex;
+            } else {
+                isUnlocked = chapter.id <= currentId || completedIds.includes(chapter.id);
+                isCompleted = completedIds.includes(chapter.id) || chapter.id < currentId;
+                isCurrent = chapter.id === currentId;
+            }
 
             let statusClass = 'locked';
             if (isCurrent) statusClass = 'current unlocked';
@@ -934,9 +1320,16 @@ const UIManager = {
                         return;
                     }
                     if (isCompleted || isCurrent) {
-                        if (confirm(`是否跳转到 第${chapter.id}章？\n注意：当前进度可能会丢失`)) {
-                            modal.style.display = 'none';
-                            Game.startChapter(chapter.id);
+                        if (isDLC) {
+                            if (confirm(`是否跳转到 第${chapter.id}章？\n注意：当前进度可能会丢失`)) {
+                                modal.style.display = 'none';
+                                Game.playDLCChapter(idx);
+                            }
+                        } else {
+                            if (confirm(`是否跳转到 第${chapter.id}章？\n注意：当前进度可能会丢失`)) {
+                                modal.style.display = 'none';
+                                Game.startChapter(chapter.id);
+                            }
                         }
                     }
                 });

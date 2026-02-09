@@ -11,7 +11,7 @@
 // ==========================================
 // 版本号（修改此处即可更新首页显示）
 // ==========================================
-const APP_VERSION = 'v3.3.1';
+const APP_VERSION = 'v3.5.0';
 
 // ==========================================
 // ⌨️ 打字机效果 TypeWriter
@@ -240,13 +240,13 @@ const Game = {
       // 记录已完成章节
       if (!GameEngine.state.completedChapters.includes(chapterId)) {
         GameEngine.state.completedChapters.push(chapterId);
-        GameEngine.saveGame();
+        if (!this.currentDLC) GameEngine.saveGame();
       }
       if (typeof AnalyticsManager !== 'undefined') {
         AnalyticsManager.trackEvent('chapter_complete', { chapter_id: chapterId });
       }
       if (this.currentDLC) {
-        this.playDLCChapter(this.dlcChapterIndex + 1);
+        UI.showDLCChapterComplete(this.currentDLC, this.dlcChapterIndex);
       } else {
         UI.showChapterComplete(chapterId);
       }
@@ -265,9 +265,23 @@ const Game = {
         });
       }
       if (this.currentDLC) {
-        alert('🎉 恭喜完成 GTM Demo！');
+        const dlcManifest = this.currentDLC;
+        const dlcScore = GameState.score;
+        // Persist DLC play record (reads chapterScores for achievements)
+        this._saveDLCRecord(dlcManifest, dlcScore);
+        // Restore main game state (keep unlockedCards merged, remove DLC chapter entries)
+        GameEngine.state.score = this._preDLCScore || 0;
+        GameEngine.state.choiceHistory = this._preDLCChoiceHistory || {};
+        GameEngine.state.completedChapters = GameEngine.state.completedChapters.filter(id => typeof id === 'number');
+        // Show ending BEFORE cleaning up chapterScores (achievements need them)
         this.currentDLC = null;
-        UI.switchScreen('intro');
+        UI.showDLCEnding(dlcManifest, dlcScore);
+        // Clean up DLC chapter scores from main save AFTER rendering
+        const dlcPrefix = `dlc_${dlcManifest.id}_`;
+        Object.keys(GameEngine.state.chapterScores || {}).forEach(key => {
+          if (key.startsWith(dlcPrefix)) delete GameEngine.state.chapterScores[key];
+        });
+        GameEngine.saveGame();
       } else {
         // 通关后显示章节选择按钮
         document.getElementById('chapter-select-btn').style.display = 'flex';
@@ -281,11 +295,7 @@ const Game = {
     if (node.unlockCard) {
       if (GameEngine.unlockCard(node.unlockCard)) {
         this.pendingDialogueNode = node;
-        if (this.currentDLC) {
-          this.showDLCKnowledgeCard(node.unlockCard);
-        } else {
-          UI.showKnowledgeCard(node.unlockCard);
-        }
+        UI.showKnowledgeCard(node.unlockCard);
         return;
       }
     }
@@ -422,6 +432,10 @@ const Game = {
       const manifest = await DLCLoader.loadManifest(dlcId);
       this.currentDLC = manifest;
       this.dlcChapterIndex = 0;
+      // Save main game state and reset for DLC
+      this._preDLCScore = GameEngine.state.score;
+      this._preDLCChoiceHistory = { ...GameEngine.state.choiceHistory };
+      GameEngine.state.score = 0;
       await this.playDLCChapter(0);
     } catch (error) {
       console.error('[Game] Failed to load DLC:', error);
@@ -444,7 +458,12 @@ const Game = {
     const chapter = this.currentDLC.chapters[index];
     this.dlcChapterIndex = index;
 
-    console.log(`[Game] Playing DLC chapter: ${chapter.title}`);
+    // Set chapterId for score tracking (DLC uses string IDs like "dlc_hr_onboarding_1")
+    const dlcChapterId = `dlc_${this.currentDLC.id}_${chapter.id}`;
+    GameEngine.state.currentChapterId = dlcChapterId;
+    GameEngine.state.currentDialogueId = 'start';
+
+    console.log(`[Game] Playing DLC chapter: ${chapter.title} (id: ${dlcChapterId})`);
 
     const script = await DLCLoader.loadScript(this.currentDLC.id, chapter.scriptFile);
     this.currentScript = script;
@@ -457,13 +476,44 @@ const Game = {
     });
   },
 
-  showDLCKnowledgeCard(cardId) {
-    if (!this.currentDLC) return;
-    const card = DLCLoader.getKnowledgeCard(this.currentDLC.id, cardId);
-    if (!card) return;
-    UI.popup.title.textContent = card.title;
-    UI.popup.content.textContent = card.content;
-    UI.popup.container.style.display = 'flex';
+  _saveDLCRecord(dlcManifest, dlcScore) {
+    // Fix bug: set DLC completion flag (was read but never written)
+    localStorage.setItem(`velotric_dlc_${dlcManifest.id}_complete`, 'true');
+
+    const dlcCardIds = dlcManifest.knowledgeCards ? Object.keys(dlcManifest.knowledgeCards) : [];
+    const unlockedDLCCards = dlcCardIds.filter(id => GameState.unlockedCards.includes(id));
+
+    let history = {};
+    try { history = JSON.parse(localStorage.getItem('velotric_dlc_history') || '{}'); } catch(e) {}
+
+    // Extract DLC chapter scores
+    const prefix = `dlc_${dlcManifest.id}_`;
+    const dlcChapterScores = {};
+    Object.entries(GameEngine.state.chapterScores || {}).forEach(([key, val]) => {
+      if (key.startsWith(prefix)) dlcChapterScores[key] = val;
+    });
+
+    // Compute achievements (reuse UIManager logic)
+    const achievements = (typeof UI !== 'undefined' && UI._computeDLCAchievements)
+      ? UI._computeDLCAchievements(dlcManifest, unlockedDLCCards.length, dlcCardIds.length, dlcScore).map(a => a.name)
+      : [];
+
+    history[dlcManifest.id] = {
+      dlcId: dlcManifest.id,
+      dlcName: dlcManifest.name,
+      dlcIcon: dlcManifest.icon || '📦',
+      completedAt: Date.now(),
+      score: dlcScore,
+      chaptersCompleted: dlcManifest.chapters.length,
+      chaptersTotal: dlcManifest.chapters.length,
+      unlockedCards: unlockedDLCCards,
+      totalCards: dlcCardIds.length,
+      chapterScores: dlcChapterScores,
+      achievements: achievements
+    };
+
+    localStorage.setItem('velotric_dlc_history', JSON.stringify(history));
+    console.log('[Game] DLC record saved:', dlcManifest.id, 'score:', dlcScore);
   }
 };
 
@@ -489,6 +539,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 初始化音频和 UI
   AudioManager.init();
   UI.init();
+
+  // 初始化首页公告
+  AnnouncementManager.init();
 
   console.log(`[Game] ${APP_VERSION} Ready`);
 });

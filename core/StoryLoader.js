@@ -109,11 +109,35 @@ const StoryLoader = {
      * @returns {Object|null} 卡片信息
      */
     getKnowledgeCard(cardId) {
-        if (!this.cache.knowledgeCards) {
-            console.warn('[StoryLoader] Knowledge cards not loaded yet');
-            return null;
+        // Search main cards first
+        if (this.cache.knowledgeCards && this.cache.knowledgeCards[cardId]) {
+            return this.cache.knowledgeCards[cardId];
         }
-        return this.cache.knowledgeCards[cardId];
+        // Then search loaded DLC cards
+        if (typeof DLCLoader !== 'undefined') {
+            for (const dlc of Object.values(DLCLoader.loadedDLCs)) {
+                if (dlc.knowledgeCards && dlc.knowledgeCards[cardId]) {
+                    return dlc.knowledgeCards[cardId];
+                }
+            }
+        }
+        return null;
+    },
+
+    /**
+     * Get all cards merged (main + loaded DLCs)
+     * @returns {Object} { cardId: cardData }
+     */
+    getAllCards() {
+        const allCards = { ...(this.cache.knowledgeCards || {}) };
+        if (typeof DLCLoader !== 'undefined') {
+            for (const dlc of Object.values(DLCLoader.loadedDLCs)) {
+                if (dlc.knowledgeCards) {
+                    Object.assign(allCards, dlc.knowledgeCards);
+                }
+            }
+        }
+        return allCards;
     },
 
     /**
@@ -122,9 +146,9 @@ const StoryLoader = {
      * @returns {Object} { cardId: cardData }
      */
     getCardsByCategory(category) {
-        if (!this.cache.knowledgeCards) return {};
+        const allCards = this.getAllCards();
         const result = {};
-        Object.entries(this.cache.knowledgeCards).forEach(([id, card]) => {
+        Object.entries(allCards).forEach(([id, card]) => {
             if (card.category === category) result[id] = card;
         });
         return result;
@@ -136,9 +160,9 @@ const StoryLoader = {
      * @returns {Object} { cardId: cardData }
      */
     getCardsByTier(tier) {
-        if (!this.cache.knowledgeCards) return {};
+        const allCards = this.getAllCards();
         const result = {};
-        Object.entries(this.cache.knowledgeCards).forEach(([id, card]) => {
+        Object.entries(allCards).forEach(([id, card]) => {
             if (card.tier === tier) result[id] = card;
         });
         return result;
@@ -149,9 +173,9 @@ const StoryLoader = {
      * @returns {Object} { category: count }
      */
     getCardCategories() {
-        if (!this.cache.knowledgeCards) return {};
+        const allCards = this.getAllCards();
         const counts = {};
-        Object.values(this.cache.knowledgeCards).forEach(card => {
+        Object.values(allCards).forEach(card => {
             const cat = card.category || 'other';
             counts[cat] = (counts[cat] || 0) + 1;
         });
