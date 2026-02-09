@@ -139,6 +139,23 @@ const UIManager = {
         document.getElementById('retry-assessment-btn').addEventListener('click', () => this.showAssessmentSetup());
         document.getElementById('back-to-menu-btn').addEventListener('click', () => this.switchScreen('intro'));
 
+        // 暂停菜单按钮
+        document.getElementById('menu-btn').addEventListener('click', () => {
+            document.getElementById('pause-menu').style.display = 'flex';
+        });
+        document.getElementById('resume-btn').addEventListener('click', () => {
+            document.getElementById('pause-menu').style.display = 'none';
+        });
+        document.getElementById('cards-btn').addEventListener('click', () => {
+            document.getElementById('pause-menu').style.display = 'none';
+            Game.showCardsScreen();
+        });
+        document.getElementById('save-quit-btn').addEventListener('click', () => {
+            GameEngine.saveGame();
+            document.getElementById('pause-menu').style.display = 'none';
+            this.switchScreen('intro');
+        });
+
         // 地图按钮
         const mapBtn = document.getElementById('map-btn');
         if (mapBtn) {
