@@ -11,7 +11,7 @@
 // ==========================================
 // 版本号（修改此处即可更新首页显示）
 // ==========================================
-const APP_VERSION = 'v3.5.0';
+const APP_VERSION = 'v3.5.1';
 
 // ==========================================
 // ⌨️ 打字机效果 TypeWriter
@@ -243,7 +243,13 @@ const Game = {
         if (!this.currentDLC) GameEngine.saveGame();
       }
       if (typeof AnalyticsManager !== 'undefined') {
-        AnalyticsManager.trackEvent('chapter_complete', { chapter_id: chapterId });
+        AnalyticsManager.trackEvent('chapter_complete', {
+          chapter_id: chapterId,
+          ...(this.currentDLC ? {
+            dlc_id: this.currentDLC.id,
+            chapter_score: GameEngine.state.chapterScores[chapterId] || 0
+          } : {})
+        });
       }
       if (this.currentDLC) {
         UI.showDLCChapterComplete(this.currentDLC, this.dlcChapterIndex);
@@ -258,17 +264,26 @@ const Game = {
       if (!GameEngine.state.completedChapters.includes(chapterId)) {
         GameEngine.state.completedChapters.push(chapterId);
       }
-      if (typeof AnalyticsManager !== 'undefined') {
-        AnalyticsManager.trackEvent('game_complete', {
-          score: GameState.score,
-          completion_time: Date.now() - GameEngine.state.gameStartTime
-        });
-      }
       if (this.currentDLC) {
         const dlcManifest = this.currentDLC;
         const dlcScore = GameState.score;
         // Persist DLC play record (reads chapterScores for achievements)
         this._saveDLCRecord(dlcManifest, dlcScore);
+        // DLC 专属埋点
+        if (typeof AnalyticsManager !== 'undefined') {
+          const dlcCardIds = dlcManifest.knowledgeCards ? Object.keys(dlcManifest.knowledgeCards) : [];
+          const unlockedDLCCards = dlcCardIds.filter(id => GameState.unlockedCards.includes(id));
+          const achievements = (typeof UI !== 'undefined' && UI._computeDLCAchievements)
+            ? UI._computeDLCAchievements(dlcManifest, unlockedDLCCards.length, dlcCardIds.length, dlcScore).map(a => a.name)
+            : [];
+          AnalyticsManager.trackEvent('dlc_complete', {
+            dlc_id: dlcManifest.id,
+            score: dlcScore,
+            unlocked_cards: unlockedDLCCards.length,
+            total_cards: dlcCardIds.length,
+            achievements: achievements
+          });
+        }
         // Restore main game state (keep unlockedCards merged, remove DLC chapter entries)
         GameEngine.state.score = this._preDLCScore || 0;
         GameEngine.state.choiceHistory = this._preDLCChoiceHistory || {};
@@ -283,6 +298,12 @@ const Game = {
         });
         GameEngine.saveGame();
       } else {
+        if (typeof AnalyticsManager !== 'undefined') {
+          AnalyticsManager.trackEvent('game_complete', {
+            score: GameState.score,
+            completion_time: Date.now() - GameEngine.state.gameStartTime
+          });
+        }
         // 通关后显示章节选择按钮
         document.getElementById('chapter-select-btn').style.display = 'flex';
         UI.showEnding();
@@ -464,6 +485,13 @@ const Game = {
     GameEngine.state.currentDialogueId = 'start';
 
     console.log(`[Game] Playing DLC chapter: ${chapter.title} (id: ${dlcChapterId})`);
+    if (typeof AnalyticsManager !== 'undefined') {
+      AnalyticsManager.trackEvent('dlc_chapter_start', {
+        dlc_id: this.currentDLC.id,
+        chapter_id: dlcChapterId,
+        chapter_index: index
+      });
+    }
 
     const script = await DLCLoader.loadScript(this.currentDLC.id, chapter.scriptFile);
     this.currentScript = script;
