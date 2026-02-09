@@ -54,7 +54,7 @@
     "adam_sku": {
         "speaker": "Adam",
         "avatar": "👨",
-        "text": "给你们一组数据——我们一共 7 个 SKU，其中 4 个做到了亿元级单品：Discover 1、Discover 2、Thunder 1、Nomad 1。",
+        "text": "给你们一组数据——我们几个产品线，其中做到了亿元级单品：Discover 1、Discover 2、Nomad 1。",
         "next": "xiaolin_channel"
     },
     "xiaolin_channel": {
