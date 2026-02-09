@@ -334,7 +334,7 @@ const UIManager = {
             achievements.push({ icon: '⚡', name: '速通达人', desc: '10分钟内通关' });
         }
 
-        const container = document.getElementById('achievements-container');
+        const container = document.getElementById('achievements-list');
         if (container) {
             container.innerHTML = '';
             if (achievements.length > 0) {
