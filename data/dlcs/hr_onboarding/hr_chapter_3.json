@@ -49,18 +49,18 @@
         "text": "面对经销商的紧急投诉……",
         "choices": [
             {
-                "text": "Mike 你好，我帮你查一下物流单号，走正常流程跟进",
-                "next": "q1_wrong",
-                "score": 0,
-                "isCorrect": false,
-                "feedback": "流程太慢，Mike 等不起"
-            },
-            {
                 "text": "Mike 我现在就拉物流和仓储同事进群，今天给你明确答复",
                 "next": "q1_right",
                 "score": 100,
                 "isCorrect": true,
                 "feedback": "第一时间拉通团队解决问题"
+            },
+            {
+                "text": "Mike 你好，我帮你查一下物流单号，走正常流程跟进",
+                "next": "q1_wrong",
+                "score": 0,
+                "isCorrect": false,
+                "feedback": "流程太慢，Mike 等不起"
             }
         ]
     },
@@ -146,18 +146,18 @@
         "text": "三个月从零开始……Andrew 开了多少家经销商？",
         "choices": [
             {
-                "text": "30 家，已经很厉害了",
-                "next": "q3_wrong",
-                "score": 0,
-                "isCorrect": false,
-                "feedback": "远不止 30 家"
-            },
-            {
                 "text": "100 家——靠计划拆解和极致执行力",
                 "next": "q3_right",
                 "score": 100,
                 "isCorrect": true,
                 "feedback": "没错！这就是进取精神"
+            },
+            {
+                "text": "30 家，已经很厉害了",
+                "next": "q3_wrong",
+                "score": 0,
+                "isCorrect": false,
+                "feedback": "远不止 30 家"
             }
         ]
     },

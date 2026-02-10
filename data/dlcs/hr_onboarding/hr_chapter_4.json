@@ -80,18 +80,18 @@
         "text": "团队实际用了多长时间？",
         "choices": [
             {
-                "text": "三个月，按正常研发节奏",
-                "next": "q2_wrong",
-                "score": 0,
-                "isCorrect": false,
-                "feedback": "比这快得多"
-            },
-            {
                 "text": "一个月！挑战不可能的任务",
                 "next": "q2_right",
                 "score": 100,
                 "isCorrect": true,
                 "feedback": "这就是卓越精神"
+            },
+            {
+                "text": "三个月，按正常研发节奏",
+                "next": "q2_wrong",
+                "score": 0,
+                "isCorrect": false,
+                "feedback": "比这快得多"
             }
         ]
     },

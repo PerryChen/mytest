@@ -75,18 +75,18 @@
         "text": "为什么 IBD 比纯线上渠道更重要？",
         "choices": [
             {
-                "text": "线下店铺得广就行，数量为王",
-                "next": "q2_wrong",
-                "score": 0,
-                "isCorrect": false,
-                "feedback": "盲目铺量不是关键"
-            },
-            {
                 "text": "大件商品需要试骑和售后，IBD 扎根社区建立用户信任",
                 "next": "q2_right",
                 "score": 100,
                 "isCorrect": true,
                 "feedback": "对！信任关系是 IBD 的核心价值"
+            },
+            {
+                "text": "线下店铺得广就行，数量为王",
+                "next": "q2_wrong",
+                "score": 0,
+                "isCorrect": false,
+                "feedback": "盲目铺量不是关键"
             }
         ]
     },

@@ -74,18 +74,18 @@
         "text": "3 个月 Review 最核心的目的是什么？",
         "choices": [
             {
-                "text": "就是看看绩效打个分，走个流程",
-                "next": "q2_wrong",
-                "score": 0,
-                "isCorrect": false,
-                "feedback": "不只是打分"
-            },
-            {
                 "text": "全面评估工作表现和文化契合度，最重要的是明确后续发展目标",
                 "next": "q2_right",
                 "score": 100,
                 "isCorrect": true,
                 "feedback": "Review 是为了成长，不是走形式"
+            },
+            {
+                "text": "就是看看绩效打个分，走个流程",
+                "next": "q2_wrong",
+                "score": 0,
+                "isCorrect": false,
+                "feedback": "不只是打分"
             }
         ]
     },

@@ -30,18 +30,18 @@
         "text": "出海公司……是这样吗？",
         "choices": [
             {
-                "text": "差不多吧，出海企业不都这样嘛",
-                "next": "q1_wrong",
-                "score": 0,
-                "isCorrect": false,
-                "feedback": "出海和全球化有本质区别"
-            },
-            {
                 "text": "不太一样吧，出海是卖货，全球化是把资源放在最合适的地方",
                 "next": "q1_right",
                 "score": 100,
                 "isCorrect": true,
                 "feedback": "没错！全球化的核心是资源按需配置"
+            },
+            {
+                "text": "差不多吧，出海企业不都这样嘛",
+                "next": "q1_wrong",
+                "score": 0,
+                "isCorrect": false,
+                "feedback": "出海和全球化有本质区别"
             }
         ]
     },

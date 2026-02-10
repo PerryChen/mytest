@@ -42,18 +42,18 @@
         "text": "入职搭子……主要负责什么呢？",
         "choices": [
             {
-                "text": "帮新人找找会议室和茶水间在哪",
-                "next": "q1_wrong",
-                "score": 0,
-                "isCorrect": false,
-                "feedback": "不只是带路这么简单"
-            },
-            {
                 "text": "陪伴入职全流程——答疑解难、参加活动、帮你融入团队",
                 "next": "q1_right",
                 "score": 100,
                 "isCorrect": true,
                 "feedback": "对！搭子是全程伙伴"
+            },
+            {
+                "text": "帮新人找找会议室和茶水间在哪",
+                "next": "q1_wrong",
+                "score": 0,
+                "isCorrect": false,
+                "feedback": "不只是带路这么简单"
             }
         ]
     },
@@ -190,18 +190,18 @@
         "text": "为什么入职第一天就安排试骑？",
         "choices": [
             {
-                "text": "就是个福利，让新人开心一下",
-                "next": "q3_wrong",
-                "score": 0,
-                "isCorrect": false,
-                "feedback": "不只是福利"
-            },
-            {
                 "text": "了解自家产品是基本功，亲身体验才有真实感受",
                 "next": "q3_right",
                 "score": 100,
                 "isCorrect": true,
                 "feedback": "做Ebike的人必须懂车"
+            },
+            {
+                "text": "就是个福利，让新人开心一下",
+                "next": "q3_wrong",
+                "score": 0,
+                "isCorrect": false,
+                "feedback": "不只是福利"
             }
         ]
     },
