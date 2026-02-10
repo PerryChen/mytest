@@ -54,13 +54,13 @@
     "adam_sku": {
         "speaker": "Adam",
         "avatar": "👨",
-        "text": "给你们一组数据——我们几个产品线，其中做到了亿元级单品：Discover 1、Discover 2、Nomad 1。",
+        "text": "给你们一组数据——我们几个产品线，Discover 系列、Nomad 系列都跑出了亿元级单品。",
         "next": "xiaolin_channel"
     },
     "xiaolin_channel": {
         "speaker": "小林",
         "avatar": "🧔",
-        "text": "4 个过亿？！那渠道呢，是走亚马逊还是自己开网店？",
+        "text": "好几个过亿？！那渠道呢，是走亚马逊还是自己开网店？",
         "next": "adam_channel"
     },
     "adam_channel": {
@@ -117,13 +117,13 @@
     "adam_discover": {
         "speaker": "Adam",
         "avatar": "👨",
-        "text": "Discover 3 是个好例子。它的成功不是靠堆配置，而是基于深度用户洞察——我们发现用户最看重舒适性和轻量化，就在这两个方向做了差异化创新。",
+        "text": "以 Discover 系列为例。它的成功不是靠堆配置，而是基于深度用户洞察——我们发现用户最看重舒适性和轻量化，就在这两个方向做了差异化创新。",
         "next": "q3"
     },
     "q3": {
         "speaker": "小唯",
         "avatar": "🧑",
-        "text": "所以 Discover 3 成功的关键因素是……",
+        "text": "所以 Discover 系列成功的关键因素是……",
         "choices": [
             {
                 "text": "功能堆料，配置拉满就对了",
