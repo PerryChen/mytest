@@ -2,7 +2,7 @@
     "start": {
         "speaker": "旁白",
         "avatar": "🏢",
-        "text": "入职第一天。清晨八点半，小唯站在 Velotric 深圳办公室门口，手里攥着 offer letter，深吸一口气。",
+        "text": "入职第一天。小唯站在 Velotric 深圳办公室门口",
         "style": "narration",
         "next": "betty_welcome"
     },
@@ -21,7 +21,7 @@
     "betty_reassure": {
         "speaker": "Betty",
         "avatar": "👩",
-        "text": "放心，今天你不是一个人！入职前我们就做了准备——欢迎邮件收到了吧？里面有公司介绍和骑行视频。",
+        "text": "放心，今天你不是一个人！入职前我们就做了准备——欢迎信息收到了吧？里面有公司介绍和骑行视频。",
         "next": "betty_buddy"
     },
     "betty_buddy": {
@@ -78,7 +78,7 @@
     "tour_start": {
         "speaker": "旁白",
         "avatar": "🏢",
-        "text": "搭子学姐带着小唯逛了一圈办公室——产品展示区、各部门工位、茶水间、健身角。",
+        "text": "搭子学姐带着小唯逛了一圈办公室——产品展示区、各部门工位、茶水间、用户照片墙。",
         "style": "narration",
         "next": "buddy_showroom"
     },
@@ -103,7 +103,7 @@
     "tour_done": {
         "speaker": "旁白",
         "avatar": "🏢",
-        "text": "入职手续、签到登记、领取工牌和电脑……一切安排得井然有序。",
+        "text": "入职手续、签到登记、领取电脑……一切安排得井然有序。",
         "style": "narration",
         "next": "lunch_start"
     },
@@ -162,14 +162,14 @@
     "ride_start": {
         "speaker": "旁白",
         "avatar": "🏢",
-        "text": "下午两点。所有新人来到一楼停车场，几台电动自行车整齐排列着。",
+        "text": "下午两点。所有新人来到一楼停车场，几台Ebike整齐排列着。",
         "style": "narration",
         "next": "betty_ride"
     },
     "betty_ride": {
         "speaker": "Betty",
         "avatar": "👩",
-        "text": "入职第一天的保留节目——产品试骑！你们不仅要骑，还要参与简单的组装体验，感受我们产品的细节。",
+        "text": "入职第一天的保留节目——产品试骑！你们不仅要骑，还可以参与简单的组装体验，感受我们产品的细节。",
         "next": "xiaowei_ride"
     },
     "xiaowei_ride": {
@@ -181,7 +181,7 @@
     "xiaolin_ride": {
         "speaker": "小林",
         "avatar": "🧔",
-        "text": "我选了那台 Thunder，加速太爽了！",
+        "text": "我选了那台 Summit 2，加速太爽了！",
         "next": "q3"
     },
     "q3": {
@@ -201,20 +201,20 @@
                 "next": "q3_right",
                 "score": 100,
                 "isCorrect": true,
-                "feedback": "做电动车的人必须懂车"
+                "feedback": "做Ebike的人必须懂车"
             }
         ]
     },
     "q3_wrong": {
         "speaker": "Betty",
         "avatar": "👩",
-        "text": "不只是开心！做电动自行车行业的人，必须对自家产品有切身体验。亲自骑过才能理解用户感受，这是所有工作的基础。",
+        "text": "不只是开心！做Ebike行业的人，必须对自家产品有切身体验。亲自骑过才能理解用户感受，这是所有工作的基础。",
         "next": "time_capsule"
     },
     "q3_right": {
         "speaker": "Betty",
         "avatar": "👩",
-        "text": "说得好！做电动车的人必须懂车。亲身体验之后，以后跟客户、经销商聊起来才有底气。",
+        "text": "说得好！做Ebike的人必须懂车。亲身体验之后，以后跟客户、经销商聊起来才有底气。",
         "next": "time_capsule"
     },
     "time_capsule": {
