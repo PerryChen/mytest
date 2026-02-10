@@ -187,7 +187,7 @@
     "bonus_check": {
         "speaker": "Adam",
         "avatar": "👨",
-        "text": "Andrew 的故事——",
+        "text": "IBD 团队的故事——",
         "condition": {
             "type": "score_gte",
             "value": 200
