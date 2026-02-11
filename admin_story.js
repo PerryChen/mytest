@@ -307,7 +307,7 @@ const StoryEditor = {
         }
 
         // 填充表单
-        document.getElementById('node-properties').style.display = 'flex';
+        document.getElementById('node-properties').style.display = 'block';
         document.getElementById('node-id').value = nodeId;
         document.getElementById('node-speaker').value = node.speaker || '';
         document.getElementById('node-avatar').value = node.avatar || '';
