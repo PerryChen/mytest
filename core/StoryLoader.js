@@ -64,12 +64,27 @@ const StoryLoader = {
             return this.cache.scripts[chapterId];
         }
 
+        // 优先从 Supabase 读取已发布版本
+        if (typeof ScriptStorage !== 'undefined') {
+            try {
+                const published = await ScriptStorage.getPublished(`main_${chapterId}`);
+                if (published) {
+                    this.cache.scripts[chapterId] = published;
+                    console.log(`[StoryLoader] Chapter ${chapterId} loaded from Supabase`);
+                    return published;
+                }
+            } catch (e) {
+                console.warn(`[StoryLoader] Supabase fallback for chapter ${chapterId}`);
+            }
+        }
+
+        // 降级：静态 JSON 文件
         try {
             const response = await fetch(`data/scripts/chapter_${chapterId}.json`, { cache: 'no-cache' });
             if (!response.ok) throw new Error(`Failed to load chapter_${chapterId}.json`);
             const data = await response.json();
             this.cache.scripts[chapterId] = data;
-            console.log(`[StoryLoader] Chapter ${chapterId} script loaded`);
+            console.log(`[StoryLoader] Chapter ${chapterId} script loaded from JSON`);
             return data;
         } catch (error) {
             console.error(`[StoryLoader] Error loading chapter ${chapterId}:`, error);

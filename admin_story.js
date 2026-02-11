@@ -7,6 +7,12 @@ const StoryEditor = {
     currentChapterId: 1,
     currentNodeId: null,
 
+    // DLC 章节元数据: { isDLC, dlcId, scriptFile } 或 null
+    _chapterMeta: null,
+
+    // 当前章节发布状态缓存
+    _publishInfo: null,
+
     // 视图模式: 'list' | 'graph'
     viewMode: 'list',
 
@@ -15,14 +21,15 @@ const StoryEditor = {
 
     init() {
         this.bindEvents();
-        this.loadChaptersList();
-        this.loadChapter(this.currentChapterId);
+        this.loadChaptersList().then(() => {
+            this.loadChapter(this.currentChapterId);
+        });
     },
 
     bindEvents() {
         // 章节选择
         document.getElementById('story-chapter-select').addEventListener('change', (e) => {
-            this.loadChapter(parseInt(e.target.value));
+            this.loadChapterByKey(e.target.value);
         });
 
         // 节点操作
@@ -57,6 +64,15 @@ const StoryEditor = {
         // 图谱视图切换
         document.getElementById('view-toggle-btn').addEventListener('click', () => this.toggleView());
 
+        // 发布到线上
+        document.getElementById('publish-story-btn')?.addEventListener('click', () => this.publishScript());
+
+        // 对比改动
+        document.getElementById('diff-story-btn')?.addEventListener('click', () => this.showDiff());
+        document.getElementById('close-diff-btn')?.addEventListener('click', () => {
+            document.getElementById('diff-modal').style.display = 'none';
+        });
+
         // 校验
         document.getElementById('validate-btn').addEventListener('click', () => this.validateScript());
         document.getElementById('close-validate-btn').addEventListener('click', () => {
@@ -67,34 +83,102 @@ const StoryEditor = {
         document.getElementById('preview-story-btn').addEventListener('click', () => this.openPreview());
         document.getElementById('close-preview-btn').addEventListener('click', () => this.closePreview());
         document.getElementById('preview-next-btn').addEventListener('click', () => this.advancePreview());
+        document.getElementById('restart-preview-btn').addEventListener('click', () => this.openPreview());
     },
 
     async loadChaptersList() {
-        // 复用 ChaptersData (admin.js)
+        const select = document.getElementById('story-chapter-select');
+        let html = '';
+
+        // 主线章节
         if (typeof ChaptersData !== 'undefined') {
             const chapters = ChaptersData.get();
-            const select = document.getElementById('story-chapter-select');
-            select.innerHTML = chapters.map(ch =>
-                `<option value="${ch.id}">第${ch.id}章 - ${ch.title}</option>`
+            html += '<optgroup label="主线剧情">';
+            html += chapters.map(ch =>
+                `<option value="main_${ch.id}">第${ch.id}章 - ${ch.title}</option>`
             ).join('');
-            select.value = this.currentChapterId;
+            html += '</optgroup>';
+        }
+
+        // DLC 章节
+        if (typeof DLCLoader !== 'undefined') {
+            try {
+                const registry = await DLCLoader.loadRegistry();
+                for (const dlc of registry) {
+                    if (dlc.status === 'coming_soon') continue;
+                    try {
+                        const manifest = await DLCLoader.loadManifest(dlc.id);
+                        html += `<optgroup label="${dlc.icon || '📦'} ${dlc.name || dlc.id}">`;
+                        (manifest.chapters || []).forEach(ch => {
+                            html += `<option value="dlc_${dlc.id}_${ch.id}">${ch.title}</option>`;
+                        });
+                        html += '</optgroup>';
+                    } catch (e) {
+                        console.warn(`[StoryEditor] Failed to load DLC manifest: ${dlc.id}`, e);
+                    }
+                }
+            } catch (e) {
+                console.warn('[StoryEditor] Failed to load DLC registry', e);
+            }
+        }
+
+        select.innerHTML = html;
+        select.value = `main_${this.currentChapterId}`;
+    },
+
+    /**
+     * 根据选择框 value 解析并加载章节
+     * @param {string} key - 格式: "main_3" 或 "dlc_hr_onboarding_2"
+     */
+    loadChapterByKey(key) {
+        if (key.startsWith('main_')) {
+            const id = parseInt(key.replace('main_', ''));
+            this._chapterMeta = null;
+            this.loadChapter(id);
+        } else if (key.startsWith('dlc_')) {
+            // 解析: dlc_{dlcId}_{chapterId} — dlcId 可能包含下划线
+            const parts = key.split('_');
+            // 最后一段是 chapterId，中间部分是 dlcId
+            const chapterId = parseInt(parts[parts.length - 1]);
+            const dlcId = parts.slice(1, -1).join('_');
+            this._chapterMeta = { isDLC: true, dlcId, chapterId };
+            this.loadDLCChapter(dlcId, chapterId);
         }
     },
 
     async loadChapter(chapterId) {
         this.currentChapterId = chapterId;
+        this._chapterMeta = null;
 
-        // 尝试从 localStorage 加载
+        // 1. 优先从 Supabase 草稿加载
+        if (typeof ScriptStorage !== 'undefined') {
+            try {
+                const record = await ScriptStorage.getDraft(`main_${chapterId}`);
+                if (record && record.content) {
+                    this.currentScript = record.content;
+                    this.renderNodeList();
+                    this.refreshCanvas();
+                    this.clearEditor();
+                    this._updatePublishStatus();
+                    return;
+                }
+            } catch (e) {
+                console.warn('[StoryEditor] Supabase draft load failed, trying localStorage');
+            }
+        }
+
+        // 2. 降级：localStorage
         const saved = localStorage.getItem(`velotric_script_${chapterId}`);
         if (saved) {
             this.currentScript = JSON.parse(saved);
             this.renderNodeList();
             this.refreshCanvas();
             this.clearEditor();
+            this._updatePublishStatus();
             return;
         }
 
-        // 默认加载 (fetch)
+        // 3. 降级：静态 JSON
         try {
             const response = await fetch(`data/scripts/chapter_${chapterId}.json`, { cache: 'no-cache' });
             if (response.ok) {
@@ -111,6 +195,77 @@ const StoryEditor = {
             console.error(e);
             this.currentScript = {};
         }
+        this._updatePublishStatus();
+    },
+
+    async loadDLCChapter(dlcId, chapterId) {
+        const storageKey = `velotric_script_dlc_${dlcId}_${chapterId}`;
+        this.currentChapterId = `dlc_${dlcId}_${chapterId}`;
+
+        // 获取 manifest（后续需要 scriptFile）
+        let manifest;
+        try {
+            manifest = DLCLoader.loadedDLCs[dlcId] || await DLCLoader.loadManifest(dlcId);
+            const chapterInfo = (manifest.chapters || []).find(c => c.id === chapterId);
+            if (chapterInfo) {
+                this._chapterMeta = { isDLC: true, dlcId, chapterId, scriptFile: chapterInfo.scriptFile };
+            }
+        } catch (e) {
+            console.warn('[StoryEditor] Manifest load failed:', e);
+        }
+
+        // 1. 优先从 Supabase 草稿加载
+        const chapterKey = `dlc_${dlcId}_${chapterId}`;
+        if (typeof ScriptStorage !== 'undefined') {
+            try {
+                const record = await ScriptStorage.getDraft(chapterKey);
+                if (record && record.content) {
+                    this.currentScript = record.content;
+                    this.renderNodeList();
+                    this.refreshCanvas();
+                    this.clearEditor();
+                    this._updatePublishStatus();
+                    return;
+                }
+            } catch (e) {
+                console.warn('[StoryEditor] Supabase draft load failed for DLC');
+            }
+        }
+
+        // 2. 降级：localStorage
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+            this.currentScript = JSON.parse(saved);
+            this.renderNodeList();
+            this.refreshCanvas();
+            this.clearEditor();
+            this._updatePublishStatus();
+            return;
+        }
+
+        // 3. 降级：从 DLCLoader 加载静态 JSON
+        try {
+            if (!manifest) {
+                manifest = await DLCLoader.loadManifest(dlcId);
+            }
+            const chapterInfo = (manifest.chapters || []).find(c => c.id === chapterId);
+            if (!chapterInfo) throw new Error(`Chapter ${chapterId} not found in DLC ${dlcId}`);
+
+            if (!this._chapterMeta) {
+                this._chapterMeta = { isDLC: true, dlcId, chapterId, scriptFile: chapterInfo.scriptFile };
+            }
+            const script = await DLCLoader.loadScript(dlcId, chapterInfo.scriptFile);
+            this.currentScript = script;
+            this.renderNodeList();
+            this.refreshCanvas();
+            this.clearEditor();
+        } catch (e) {
+            console.error('[StoryEditor] Failed to load DLC chapter:', e);
+            this.currentScript = {};
+            this.renderNodeList();
+            this.refreshCanvas();
+        }
+        this._updatePublishStatus();
     },
 
     renderNodeList() {
@@ -196,16 +351,24 @@ const StoryEditor = {
 
     updateUnlockOptions(currentCard) {
         const select = document.getElementById('node-unlock-card');
-        // 获取所有知识卡
-        let cards = {};
+        let html = '<option value="">(无)</option>';
+
+        // 主线知识卡
         if (typeof KnowledgeBase !== 'undefined' && KnowledgeBase.data) {
-            cards = KnowledgeBase.data;
+            Object.entries(KnowledgeBase.data).forEach(([id, card]) => {
+                html += `<option value="${id}">${card.title} (${id})</option>`;
+            });
         }
 
-        let html = '<option value="">(无)</option>';
-        Object.entries(cards).forEach(([id, card]) => {
-            html += `<option value="${id}">${card.title} (${id})</option>`;
-        });
+        // DLC 知识卡
+        if (this._chapterMeta && typeof DLCLoader !== 'undefined') {
+            const dlc = DLCLoader.loadedDLCs[this._chapterMeta.dlcId];
+            if (dlc && dlc.knowledgeCards) {
+                Object.entries(dlc.knowledgeCards).forEach(([id, card]) => {
+                    html += `<option value="${id}">${card.title} (${id})</option>`;
+                });
+            }
+        }
 
         select.innerHTML = html;
         select.value = currentCard || '';
@@ -359,18 +522,162 @@ const StoryEditor = {
         }
     },
 
-    saveScript() {
-        localStorage.setItem(`velotric_script_${this.currentChapterId}`, JSON.stringify(this.currentScript));
-        if (typeof AdminUI !== 'undefined') {
-            AdminUI.showToast(`第 ${this.currentChapterId} 章脚本已保存！`);
+    /**
+     * 获取当前章节的存储 key
+     * @returns {string} e.g. "main_3" 或 "dlc_hr_onboarding_2"
+     */
+    _getChapterKey() {
+        if (this._chapterMeta) {
+            return `dlc_${this._chapterMeta.dlcId}_${this._chapterMeta.chapterId}`;
         }
+        return `main_${this.currentChapterId}`;
+    },
+
+    async saveScript() {
+        // 始终保存到 localStorage（离线备份）
+        localStorage.setItem(`velotric_script_${this.currentChapterId}`, JSON.stringify(this.currentScript));
+
+        // 同时保存到 Supabase 草稿
+        const chapterKey = this._getChapterKey();
+        let cloudSaved = false;
+        if (typeof ScriptStorage !== 'undefined') {
+            cloudSaved = await ScriptStorage.saveDraft(chapterKey, this.currentScript);
+        }
+
+        const label = this._chapterMeta ? `DLC 章节 ${this._chapterMeta.chapterId}` : `第 ${this.currentChapterId} 章`;
+        const suffix = cloudSaved ? '（已同步云端）' : '（仅本地）';
+        if (typeof AdminUI !== 'undefined') {
+            AdminUI.showToast(`${label} 脚本已保存！${suffix}`);
+        }
+
+        this._updatePublishStatus();
+    },
+
+    /**
+     * 发布当前章节到线上（将草稿复制到 published_content）
+     */
+    async publishScript() {
+        if (typeof ScriptStorage === 'undefined') {
+            alert('Supabase 未连接，无法发布');
+            return;
+        }
+
+        const chapterKey = this._getChapterKey();
+        const label = this._chapterMeta ? `DLC 章节 ${this._chapterMeta.chapterId}` : `第 ${this.currentChapterId} 章`;
+
+        // 发布前检查
+        if (typeof ScriptDiff !== 'undefined') {
+            const record = await ScriptStorage.getDraft(chapterKey);
+            const published = record?.published_content || {};
+            const diffResult = ScriptDiff.compare(this.currentScript, published);
+            const checkResult = ScriptDiff.renderChecklist(this.currentScript, diffResult);
+
+            if (checkResult.errors > 0) {
+                alert(`发布被阻止：有 ${checkResult.errors} 个错误需要修复。\n请先运行"校验"查看详情。`);
+                return;
+            }
+
+            if (diffResult.stats.added === 0 && diffResult.stats.modified === 0 && diffResult.stats.removed === 0) {
+                alert('无改动，草稿与线上版本一致。');
+                return;
+            }
+
+            const summary = `${diffResult.stats.added} 新增, ${diffResult.stats.modified} 修改, ${diffResult.stats.removed} 删除`;
+            if (checkResult.warnings > 0) {
+                if (!confirm(`${label} 有 ${checkResult.warnings} 个警告。\n改动: ${summary}\n\n是否仍要发布？`)) return;
+            } else {
+                if (!confirm(`确认发布 ${label}？\n改动: ${summary}`)) return;
+            }
+        }
+
+        // 先确保草稿已保存
+        const saved = await ScriptStorage.saveDraft(chapterKey, this.currentScript);
+        if (!saved) {
+            alert('保存草稿失败，无法发布');
+            return;
+        }
+
+        const note = prompt('发布备注（可选）:', '') || '';
+        const ok = await ScriptStorage.publish(chapterKey, note);
+        if (ok) {
+            if (typeof AdminUI !== 'undefined') {
+                AdminUI.showToast(`${label} 已发布到线上！`);
+            }
+            this._updatePublishStatus();
+        } else {
+            alert('发布失败，请检查网络或 Supabase 配置');
+        }
+    },
+
+    /**
+     * 更新发布状态指示器
+     */
+    async _updatePublishStatus() {
+        const el = document.getElementById('publish-status');
+        if (!el) return;
+
+        if (typeof ScriptStorage === 'undefined') {
+            el.textContent = '离线模式';
+            el.className = 'publish-status offline';
+            return;
+        }
+
+        const chapterKey = this._getChapterKey();
+        const record = await ScriptStorage.getDraft(chapterKey);
+        this._publishInfo = record;
+
+        if (!record) {
+            el.textContent = '未保存';
+            el.className = 'publish-status unsaved';
+        } else if (!record.published_content) {
+            el.textContent = '草稿（未发布）';
+            el.className = 'publish-status draft';
+        } else if (JSON.stringify(record.content) !== JSON.stringify(record.published_content)) {
+            el.textContent = `v${record.version} 已发布 · 有新改动`;
+            el.className = 'publish-status modified';
+        } else {
+            el.textContent = `v${record.version} 已发布`;
+            el.className = 'publish-status published';
+        }
+    },
+
+    /**
+     * 显示草稿 vs 已发布版本的 diff 对比
+     */
+    async showDiff() {
+        if (typeof ScriptDiff === 'undefined' || typeof ScriptStorage === 'undefined') {
+            alert('Diff 模块或 Supabase 未加载');
+            return;
+        }
+
+        const chapterKey = this._getChapterKey();
+        const record = await ScriptStorage.getDraft(chapterKey);
+        const published = record?.published_content || {};
+
+        const diffResult = ScriptDiff.compare(this.currentScript, published);
+        const diffHtml = ScriptDiff.render(diffResult);
+        const checkResult = ScriptDiff.renderChecklist(this.currentScript, diffResult);
+
+        const body = document.getElementById('diff-body');
+        body.innerHTML = checkResult.html + diffHtml;
+
+        document.getElementById('diff-modal').style.display = 'flex';
     },
 
     exportJSON() {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.currentScript, null, 2));
         const downloadAnchorNode = document.createElement('a');
         downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", `chapter_${this.currentChapterId}.json`);
+        // DLC 用原始文件名，主线用 chapter_N.json
+        let filename;
+        if (this._chapterMeta && this._chapterMeta.scriptFile) {
+            filename = this._chapterMeta.scriptFile;
+        } else if (this._chapterMeta) {
+            filename = `hr_chapter_${this._chapterMeta.chapterId}.json`;
+        } else {
+            filename = `chapter_${this.currentChapterId}.json`;
+        }
+        downloadAnchorNode.setAttribute("download", filename);
         document.body.appendChild(downloadAnchorNode);
         downloadAnchorNode.click();
         downloadAnchorNode.remove();
@@ -396,7 +703,8 @@ const StoryEditor = {
                     alert('空的脚本文件');
                     return;
                 }
-                if (!confirm(`即将导入 ${keys.length} 个节点到第 ${this.currentChapterId} 章，是否覆盖当前内容？`)) {
+                const label = this._chapterMeta ? `DLC 章节` : `第 ${this.currentChapterId} 章`;
+                if (!confirm(`即将导入 ${keys.length} 个节点到${label}，是否覆盖当前内容？`)) {
                     return;
                 }
                 this.currentScript = data;
@@ -621,9 +929,13 @@ const StoryEditor = {
         });
     },
 
-    // ===== 对话预览 =====
+    // ===== 对话预览 (v3.7.0 增强) =====
 
     _previewNodeId: null,
+    _previewScore: 0,
+    _previewCorrect: 0,
+    _previewTotal: 0,
+    _previewCards: [],
 
     openPreview() {
         const nodeIds = Object.keys(this.currentScript);
@@ -632,6 +944,11 @@ const StoryEditor = {
             return;
         }
         this._previewNodeId = nodeIds.includes('start') ? 'start' : nodeIds[0];
+        this._previewScore = 0;
+        this._previewCorrect = 0;
+        this._previewTotal = 0;
+        this._previewCards = [];
+        this._updateScoreboard();
         document.getElementById('story-preview-modal').style.display = 'flex';
         this._renderPreviewNode();
     },
@@ -641,16 +958,25 @@ const StoryEditor = {
         this._previewNodeId = null;
     },
 
+    _updateScoreboard() {
+        const el = document.getElementById('preview-scoreboard');
+        if (el) el.textContent = `得分: ${this._previewScore} | 正确: ${this._previewCorrect}/${this._previewTotal}`;
+    },
+
     _renderPreviewNode() {
+        const cardEl = document.getElementById('preview-card-unlock');
+        if (cardEl) cardEl.style.display = 'none';
+
         const node = this.currentScript[this._previewNodeId];
         if (!node) {
-            // 结束
-            document.getElementById('preview-avatar').textContent = '🎬';
-            document.getElementById('preview-speaker').textContent = '结束';
-            document.getElementById('preview-text').textContent = '对话流程已结束';
-            document.getElementById('preview-node-indicator').textContent = '(END)';
-            document.getElementById('preview-choices').innerHTML = '';
-            document.getElementById('preview-next-btn').style.display = 'none';
+            // 章节结束 — 显示总结
+            this._showPreviewSummary();
+            return;
+        }
+
+        // 检测 event: chapter_complete 或 game_complete
+        if (node.event === 'chapter_complete' || node.event === 'game_complete') {
+            this._showPreviewSummary();
             return;
         }
 
@@ -658,6 +984,13 @@ const StoryEditor = {
         document.getElementById('preview-speaker').textContent = node.speaker || 'System';
         document.getElementById('preview-text').textContent = node.text || '(事件节点)';
         document.getElementById('preview-node-indicator').textContent = `node: ${this._previewNodeId}`;
+
+        // 知识卡解锁提示
+        if (node.unlockCard && cardEl) {
+            this._previewCards.push(node.unlockCard);
+            cardEl.textContent = `🎴 解锁知识卡: ${node.unlockCard}`;
+            cardEl.style.display = 'block';
+        }
 
         const choicesArea = document.getElementById('preview-choices');
         choicesArea.innerHTML = '';
@@ -669,20 +1002,76 @@ const StoryEditor = {
                 btn.className = 'btn btn-secondary preview-choice-btn';
                 btn.textContent = `${String.fromCharCode(65 + i)}. ${c.text}`;
                 btn.addEventListener('click', () => {
-                    this._previewNodeId = c.next || null;
-                    this._renderPreviewNode();
+                    // 分数追踪
+                    if (c.isCorrect !== undefined) {
+                        this._previewTotal++;
+                        this._previewScore += (c.score || 0);
+                        if (c.isCorrect) this._previewCorrect++;
+                        this._updateScoreboard();
+                    }
+                    // 对错反馈
+                    btn.style.pointerEvents = 'none';
+                    choicesArea.querySelectorAll('.preview-choice-btn').forEach(b => b.style.pointerEvents = 'none');
+                    btn.style.background = c.isCorrect ? '#2d6a4f' : '#922b21';
+                    btn.style.color = '#fff';
+                    if (c.feedback) {
+                        const fb = document.createElement('div');
+                        fb.style.cssText = 'padding:8px;margin-top:8px;font-size:13px;color:#aaa;text-align:center;';
+                        fb.textContent = (c.isCorrect ? '✅ ' : '❌ ') + c.feedback;
+                        choicesArea.appendChild(fb);
+                    }
+                    // 延迟跳转
+                    setTimeout(() => {
+                        this._previewNodeId = c.next || null;
+                        this._renderPreviewNode();
+                    }, 1200);
                 });
                 choicesArea.appendChild(btn);
             });
+        } else if (node.condition) {
+            // 条件分支 — 根据当前分数自动选路
+            document.getElementById('preview-next-btn').style.display = '';
+            const meetsCondition = node.condition.type === 'score_gte' && this._previewScore >= node.condition.value;
+            const indicator = document.getElementById('preview-node-indicator');
+            indicator.textContent += ` | 条件: 得分≥${node.condition.value} → ${meetsCondition ? '✅ 满足' : '❌ 不满足'}`;
+            // 点继续时根据条件跳转
+            this._conditionNext = meetsCondition ? node.next : node.fallbackNext;
         } else {
             document.getElementById('preview-next-btn').style.display = '';
+            this._conditionNext = null;
         }
+    },
+
+    _showPreviewSummary() {
+        // 计算满分
+        let maxScore = 0;
+        Object.values(this.currentScript).forEach(n => {
+            if (n.choices) {
+                const max = Math.max(...n.choices.map(c => c.score || 0), 0);
+                if (n.choices.some(c => c.isCorrect !== undefined)) maxScore += max;
+            }
+        });
+
+        document.getElementById('preview-avatar').textContent = '🏁';
+        document.getElementById('preview-speaker').textContent = '章节结束';
+        const rate = this._previewTotal > 0 ? Math.round(this._previewCorrect / this._previewTotal * 100) : 0;
+        document.getElementById('preview-text').innerHTML =
+            `<div style="text-align:center;line-height:2;">
+                <div><strong>得分：${this._previewScore} / ${maxScore}</strong></div>
+                <div>正确率：${this._previewCorrect}/${this._previewTotal} (${rate}%)</div>
+                ${this._previewCards.length > 0 ? `<div>🎴 解锁卡片：${this._previewCards.join(', ')}</div>` : ''}
+            </div>`;
+        document.getElementById('preview-node-indicator').textContent = '(END)';
+        document.getElementById('preview-choices').innerHTML = '';
+        document.getElementById('preview-next-btn').style.display = 'none';
     },
 
     advancePreview() {
         const node = this.currentScript[this._previewNodeId];
         if (!node) return;
-        this._previewNodeId = node.next || null;
+        // 条件分支用预计算的路径
+        this._previewNodeId = this._conditionNext || node.next || null;
+        this._conditionNext = null;
         this._renderPreviewNode();
     },
 
@@ -773,7 +1162,51 @@ const StoryEditor = {
             }
         });
 
-        if (issues.length === 0) {
+        // ===== 分数审计与答案平衡 (v3.6.1) =====
+        let totalScore = 0;
+        let quizCount = 0;
+        let aCorrect = 0, bCorrect = 0;
+
+        nodeIds.forEach(id => {
+            const node = this.currentScript[id];
+            if (node.choices && node.choices.length >= 2) {
+                const hasCorrect = node.choices.some(c => c.isCorrect);
+                if (hasCorrect) {
+                    quizCount++;
+                    const maxScore = Math.max(...node.choices.map(c => c.score || 0));
+                    totalScore += maxScore;
+
+                    // A/B 分布（第一个选项=A，第二个=B）
+                    if (node.choices[0] && node.choices[0].isCorrect) aCorrect++;
+                    else if (node.choices[1] && node.choices[1].isCorrect) bCorrect++;
+
+                    // isCorrect 与 score 一致性
+                    node.choices.forEach((c, i) => {
+                        if (c.isCorrect && (c.score || 0) === 0) {
+                            issues.push({ type: 'error', msg: `节点 "${id}" 选项 #${i + 1} 标记为正确但分数为 0` });
+                        }
+                        if (!c.isCorrect && (c.score || 0) > 0) {
+                            issues.push({ type: 'error', msg: `节点 "${id}" 选项 #${i + 1} 标记为错误但分数为 ${c.score}` });
+                        }
+                        if (!c.feedback) {
+                            issues.push({ type: 'warning', msg: `节点 "${id}" 选项 #${i + 1} 缺少反馈语` });
+                        }
+                    });
+                }
+            }
+        });
+
+        if (quizCount > 0) {
+            issues.push({ type: 'info', msg: `📊 题目统计：${quizCount} 道题，满分 ${totalScore} 分` });
+            const balance = `A正确: ${aCorrect} | B正确: ${bCorrect}`;
+            if (Math.abs(aCorrect - bCorrect) > 1) {
+                issues.push({ type: 'warning', msg: `⚖️ 答案分布不均衡：${balance}（建议接近 1:1）` });
+            } else {
+                issues.push({ type: 'success', msg: `⚖️ 答案分布均衡：${balance}` });
+            }
+        }
+
+        if (issues.filter(i => i.type === 'error').length === 0 && issues.filter(i => i.type === 'warning').length === 0) {
             issues.push({ type: 'success', msg: `全部 ${nodeIds.size} 个节点校验通过，无问题` });
         }
 
@@ -795,6 +1228,10 @@ const StoryEditor = {
     // ===== 章节属性设置 =====
 
     openChapterSettings() {
+        if (this._chapterMeta) {
+            alert("DLC 章节属性请在 manifest.json 中配置");
+            return;
+        }
         const chapters = ChaptersData.get();
         const chapter = chapters.find(c => c.id === this.currentChapterId);
 

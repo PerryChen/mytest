@@ -4,7 +4,7 @@
 - Velotric e-bike training game: visual novel + quiz, mobile-first
 - Vanilla JS, no build tools, no frameworks
 - Live site: `http://43.139.180.191`
-- Version constant: `APP_VERSION` in `game.js` line 14 (currently v3.5.5)
+- Version constant: `APP_VERSION` in `game.js` line 14 (currently v3.9.0)
 
 ## Architecture
 

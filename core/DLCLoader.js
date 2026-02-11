@@ -34,6 +34,24 @@ const DLCLoader = {
      * @returns {Promise<Object>} 脚本内容
      */
     async loadScript(dlcId, scriptFile) {
+        // 优先从 Supabase 读取已发布版本
+        if (typeof ScriptStorage !== 'undefined') {
+            try {
+                const match = scriptFile.match(/_(\d+)\.json$/);
+                if (match) {
+                    const chapterKey = `dlc_${dlcId}_${match[1]}`;
+                    const published = await ScriptStorage.getPublished(chapterKey);
+                    if (published) {
+                        console.log(`[DLCLoader] Script loaded from Supabase: ${chapterKey}`);
+                        return published;
+                    }
+                }
+            } catch (e) {
+                console.warn('[DLCLoader] Supabase fallback for script:', scriptFile);
+            }
+        }
+
+        // 降级：静态 JSON 文件
         try {
             const response = await fetch(`data/dlcs/${dlcId}/${scriptFile}`, { cache: 'no-cache' });
             if (!response.ok) throw new Error(`Failed to load script: ${scriptFile}`);
