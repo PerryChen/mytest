@@ -803,7 +803,8 @@
     padding: 20px;
     background: var(--bg-card);
     overflow-y: auto;
-    min-height: 0;
+    height: 100%;
+    box-sizing: border-box;
 }
 
 /* 修复内部表单元素的显示 */
