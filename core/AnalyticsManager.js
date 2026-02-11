@@ -157,7 +157,7 @@ const AnalyticsManager = {
                 .from('game_events')
                 .select('*')
                 .order('created_at', { ascending: false })
-                .limit(100);
+                .limit(5000);
 
             if (error) {
                 console.warn('[Analytics] Fetch Error:', error.message);
