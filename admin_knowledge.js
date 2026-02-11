@@ -1,11 +1,26 @@
 /**
- * 知识库管理 (CMS)
+ * 知识库管理 (CMS) - 支持主线 + DLC 知识卡
  */
 const KnowledgeBase = {
     data: {},
     currentCardId: null,
+    _initialized: false,
+
+    // 分类名称映射
+    _categoryLabels: {
+        product: '产品开发',
+        engineering: '工程验证',
+        manufacturing: '生产制造',
+        logistics: '物流供应链',
+        sales: '渠道销售',
+        marketing: '品牌营销',
+        hr: 'HR 培训',
+        other: '其他'
+    },
 
     init() {
+        if (this._initialized) return;
+        this._initialized = true;
         this.bindEvents();
         this.loadData();
     },
@@ -29,43 +44,95 @@ const KnowledgeBase = {
         });
     },
 
-    loadData() {
+    async loadData() {
         // 先尝试从 LocalStorage 加载
         const saved = localStorage.getItem('velotric_knowledge_config');
         if (saved) {
             this.data = JSON.parse(saved);
             this.renderList();
-        } else {
-            // 否则加载默认数据
-            // 注意：这里需要 StoryLoader 已加载 (在 admin.html 中引入了)
-            // 如果 StoryLoader 还没 ready，可能需要 fetch
-            if (typeof StoryLoader !== 'undefined') {
-                StoryLoader.loadKnowledgeCards().then(data => {
-                    this.data = JSON.parse(JSON.stringify(data)); // Deep copy
-                    this.renderList();
-                });
+            return;
+        }
+
+        // 加载主线知识卡
+        if (typeof StoryLoader !== 'undefined') {
+            try {
+                const mainCards = await StoryLoader.loadKnowledgeCards();
+                this.data = JSON.parse(JSON.stringify(mainCards));
+            } catch (e) {
+                console.warn('[KnowledgeBase] Failed to load main cards:', e);
             }
         }
+
+        // 加载 DLC 知识卡
+        if (typeof DLCLoader !== 'undefined') {
+            try {
+                const registry = await DLCLoader.loadRegistry();
+                for (const dlc of registry) {
+                    if (dlc.status === 'coming_soon') continue;
+                    try {
+                        const manifest = await DLCLoader.loadManifest(dlc.id);
+                        if (manifest.knowledgeCards) {
+                            Object.assign(this.data, JSON.parse(JSON.stringify(manifest.knowledgeCards)));
+                        }
+                    } catch (e) {
+                        console.warn(`[KnowledgeBase] Failed to load DLC cards: ${dlc.id}`, e);
+                    }
+                }
+            } catch (e) {
+                console.warn('[KnowledgeBase] Failed to load DLC registry:', e);
+            }
+        }
+
+        this.renderList();
     },
 
     renderList() {
         const listContainer = document.getElementById('knowledge-list');
         listContainer.innerHTML = '';
 
+        // 按 category 分组
+        const groups = {};
         Object.entries(this.data).forEach(([id, card]) => {
-            const item = document.createElement('div');
-            item.className = 'knowledge-card-item';
-            item.dataset.id = id;
-            if (id === this.currentCardId) item.classList.add('active');
-
-            item.innerHTML = `
-                <div style="font-weight:bold;">${card.title || '未命名卡片'}</div>
-                <div style="font-size:12px; opacity:0.7;">ID: ${id}</div>
-            `;
-
-            item.addEventListener('click', () => this.selectCard(id));
-            listContainer.appendChild(item);
+            const cat = card.category || 'other';
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push({ id, card });
         });
+
+        // 按预定义顺序排列分类
+        const order = ['product', 'engineering', 'manufacturing', 'logistics', 'sales', 'marketing', 'hr', 'other'];
+        const sortedCats = Object.keys(groups).sort((a, b) => {
+            const ia = order.indexOf(a), ib = order.indexOf(b);
+            return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+        });
+
+        for (const cat of sortedCats) {
+            const label = this._categoryLabels[cat] || cat;
+
+            // 分组标题
+            const header = document.createElement('div');
+            header.className = 'knowledge-group-header';
+            header.textContent = `${label} (${groups[cat].length})`;
+            listContainer.appendChild(header);
+
+            // 卡片列表
+            for (const { id, card } of groups[cat]) {
+                const item = document.createElement('div');
+                item.className = 'knowledge-card-item';
+                item.dataset.id = id;
+                if (id === this.currentCardId) item.classList.add('active');
+
+                const tierBadge = card.tier === 'advanced' ? ' <span class="tier-badge advanced">进阶</span>'
+                    : card.tier === 'expert' ? ' <span class="tier-badge expert">专家</span>' : '';
+
+                item.innerHTML = `
+                    <div style="font-weight:bold;">${card.title || '未命名卡片'}${tierBadge}</div>
+                    <div style="font-size:12px; opacity:0.7;">ID: ${id}</div>
+                `;
+
+                item.addEventListener('click', () => this.selectCard(id));
+                listContainer.appendChild(item);
+            }
+        }
     },
 
     updateListItem(id) {
@@ -87,9 +154,11 @@ const KnowledgeBase = {
         const card = this.data[id];
         document.getElementById('card-editor').style.display = 'block';
         document.getElementById('card-id-input').value = id;
-        document.getElementById('card-id-input').readOnly = true; // ID 不可修改
-        document.getElementById('card-title-input').value = card.title;
-        document.getElementById('card-content-input').value = card.content;
+        document.getElementById('card-id-input').readOnly = true;
+        document.getElementById('card-title-input').value = card.title || '';
+        document.getElementById('card-content-input').value = card.content || '';
+        document.getElementById('card-category-input').value = card.category || 'other';
+        document.getElementById('card-tier-input').value = card.tier || 'basic';
     },
 
     addNewCard() {
@@ -103,7 +172,9 @@ const KnowledgeBase = {
 
         this.data[newId] = {
             title: "新知识卡片",
-            content: "在这里输入卡片内容..."
+            content: "在这里输入卡片内容...",
+            category: "other",
+            tier: "basic"
         };
 
         this.renderList();
@@ -125,6 +196,8 @@ const KnowledgeBase = {
         if (!this.currentCardId) return;
         this.data[this.currentCardId].title = document.getElementById('card-title-input').value;
         this.data[this.currentCardId].content = document.getElementById('card-content-input').value;
+        this.data[this.currentCardId].category = document.getElementById('card-category-input').value;
+        this.data[this.currentCardId].tier = document.getElementById('card-tier-input').value;
     },
 
     saveData() {
@@ -143,7 +216,6 @@ window.KnowledgeBase = KnowledgeBase;
 
 // 监听 Tab 切换
 document.addEventListener('DOMContentLoaded', () => {
-    // 监听 AdminUI 的 Tab 切换事件 (如果是 Knowledge Tab)
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             if (btn.dataset.tab === 'knowledge') {

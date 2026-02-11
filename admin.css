@@ -918,6 +918,40 @@
     background: var(--bg-elevated);
 }
 
+.knowledge-group-header {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-top: 12px;
+    margin-bottom: 4px;
+}
+
+.knowledge-group-header:first-child {
+    margin-top: 0;
+}
+
+.tier-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-weight: normal;
+    vertical-align: middle;
+}
+
+.tier-badge.advanced {
+    background: hsl(45, 80%, 30%);
+    color: hsl(45, 90%, 85%);
+}
+
+.tier-badge.expert {
+    background: hsl(280, 60%, 35%);
+    color: hsl(280, 80%, 90%);
+}
+
 .knowledge-card-item {
     padding: 12px;
     background: var(--bg-card);
