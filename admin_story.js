@@ -19,7 +19,11 @@ const StoryEditor = {
     // 图谱节点位置缓存
     _graphPositions: {},
 
+    _initialized: false,
+
     init() {
+        if (this._initialized) return;
+        this._initialized = true;
         this.bindEvents();
         this.loadChaptersList().then(() => {
             this.loadChapter(this.currentChapterId);
@@ -1283,6 +1287,10 @@ const StoryEditor = {
 window.StoryEditor = StoryEditor;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 剧情编辑是默认活跃标签，首次加载时直接初始化
+    StoryEditor.init();
+
+    // 切换回剧情标签时也初始化（_initialized 防重入）
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             if (btn.dataset.tab === 'story') {
