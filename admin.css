@@ -203,8 +203,18 @@
     display: block;
 }
 
+/* 剧情编辑面板：flex 列布局，让编辑器自动填满剩余高度 */
+#story-panel.admin-panel.active {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 125px);
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
 .panel-header {
     margin-bottom: 24px;
+    flex-shrink: 0;
 }
 
 .chapter-selector {
@@ -677,9 +687,8 @@
 
 .story-editor-container {
     display: flex;
-    /* 适配屏幕高度，扣除头部导航和padding */
-    height: calc(100vh - 200px);
-    min-height: 500px;
+    flex: 1;
+    min-height: 0;
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
@@ -803,8 +812,7 @@
     padding: 20px;
     background: var(--bg-card);
     overflow-y: auto;
-    height: 100%;
-    box-sizing: border-box;
+    min-height: 0;
 }
 
 /* 修复内部表单元素的显示 */
